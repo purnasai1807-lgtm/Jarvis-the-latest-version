@@ -1,0 +1,124 @@
+# Routines — declarative workflows triggered by voice or schedule.
+# Edit this file freely and reload via the dashboard or by restarting Jarvis.
+#
+# Schema:
+#   name           short id, used for "run routine X" calls
+#   description    human-readable purpose
+#   triggers:      list of trigger dicts. Any matching trigger fires the routine.
+#     - type: voice
+#       phrases: ["good morning", "morning jarvis"]
+#     - type: schedule
+#       time: "HH:MM"
+#       days: weekdays | weekends | daily
+#   steps:         ordered list executed top-to-bottom
+#     - tool: <tool_name>          # call a registered tool
+#       args: {key: value, ...}
+#     - speak: "free-form text"    # TTS announcement via the router
+#     - wait: 1.5                  # seconds
+#     - routine: other_name        # nested routine
+
+routines:
+  - name: good_morning
+    description: "Daily wake-up sequence"
+    triggers:
+      - type: voice
+        phrases: ["good morning jarvis", "buna dimineata jarvis", "morning jarvis"]
+      # schedule trigger is also handled via the briefing job at 07:30,
+      # so we don't double-fire here.
+    steps:
+      - tool: hue_scene
+        args: {scene: "Energize"}
+      - speak: "Good morning, sir. Let me bring you up to speed."
+      - tool: morning_briefing
+      - wait: 0.4
+
+  - name: focus_mode
+    description: "Quiet workspace for deep work"
+    triggers:
+      - type: voice
+        phrases: ["focus mode", "deep work", "mod concentrare"]
+    steps:
+      - tool: hue_scene
+        args: {scene: "Concentrate"}
+      - speak: "Focus mode engaged. Notifications muted."
+
+  - name: good_night
+    description: "End of day shutdown"
+    triggers:
+      - type: voice
+        phrases: ["good night jarvis", "noapte buna jarvis", "lights out"]
+    steps:
+      - speak: "Good night, sir. Sleep well."
+      - tool: hue_scene
+        args: {scene: "Nightlight"}
+      - tool: spotify_control
+        args: {action: "pause"}
+
+  - name: leaving_home
+    description: "Quick exit — kill music, dim lights, lock workstation"
+    triggers:
+      - type: voice
+        phrases: ["i'm leaving", "plec de acasa", "leaving home"]
+      - type: event
+        event: "geofence.exit:home"
+    steps:
+      - speak: "On it. See you later, sir."
+      - tool: spotify_control
+        args: {action: "pause"}
+      - tool: lights_control
+        args: {action: "off"}
+
+  - name: arriving_home
+    description: "Welcome back — bring the room to life"
+    triggers:
+      - type: event
+        event: "geofence.enter:home"
+    steps:
+      - tool: hue_scene
+        args: {scene: "Energize"}
+      - speak: "Welcome home, sir."
+
+  # ── Energy mode — circadian lighting (delete what you don't want) ──
+  # These shift Hue scenes through the day so the room matches your energy.
+  # Disabled-by-default? No — they auto-enable when this file is loaded.
+  # Comment out a routine to disable it.
+
+  - name: energy_morning
+    description: "Bright, energising light to start the day"
+    triggers:
+      - type: schedule
+        time: "08:00"
+        days: weekdays
+    steps:
+      - tool: hue_scene
+        args: {scene: "Energize"}
+
+  - name: energy_focus
+    description: "Cool light for afternoon focus"
+    triggers:
+      - type: schedule
+        time: "14:00"
+        days: weekdays
+    steps:
+      - tool: hue_scene
+        args: {scene: "Concentrate"}
+
+  - name: energy_evening
+    description: "Warm wind-down lighting"
+    triggers:
+      - type: schedule
+        time: "20:00"
+        days: daily
+    steps:
+      - tool: hue_scene
+        args: {scene: "Relax"}
+
+  - name: energy_late
+    description: "Dim warm light — pre-sleep"
+    triggers:
+      - type: schedule
+        time: "22:30"
+        days: daily
+    steps:
+      - tool: hue_scene
+        args: {scene: "Nightlight"}

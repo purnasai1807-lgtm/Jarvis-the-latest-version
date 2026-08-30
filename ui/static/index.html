@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S. Dashboard V2</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- Prism.js for Syntax Highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- Main Content — full viewport -->
+    <div class="main-content">
+        <!-- Top Bar — translucent floating -->
+        <header class="top-bar">
+            <h2 id="page-title" style="color: var(--accent-cyan); font-size: 0.9rem; letter-spacing: 3px; text-shadow: 0 0 10px rgba(0,200,232,0.3);">J.A.R.V.I.S.</h2>
+            <div class="top-bar-right">
+                <div class="status-indicator" title="Jarvis Status">
+                    <span class="status-dot standby" id="jarvis-status-dot"></span>
+                    <span id="jarvis-status-label">STANDBY</span>
+                </div>
+                <div class="clock">
+                    <span id="header-date">2026-04-07</span>
+                    <span id="header-time">12:00:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- HOME PAGE — Neural Hub (always visible, fills viewport) -->
+        <section id="page-home" class="page active">
+                <!-- Background effects -->
+                <div class="hud-grid-bg"></div>
+                <div class="hud-particles" id="hud-particles"></div>
+                <div class="hud-scanline"></div>
+
+                <!-- Live agentic-state strip (top-right, always visible) -->
+                <div id="agent-strip" class="agent-strip">
+                    <span id="agent-strip-presence" class="agent-chip">—</span>
+                    <span id="agent-strip-tasks" class="agent-chip" style="display:none;">⚙ 0</span>
+                    <span id="agent-strip-watches" class="agent-chip" style="display:none;">👁 0</span>
+                    <span id="agent-strip-plan" class="agent-chip plan-pending" style="display:none;">⚠ PLAN</span>
+                    <span id="agent-strip-meeting" class="agent-chip" style="display:none;">🎤 MTG</span>
+                </div>
+
+                <!-- Center Arc Reactor — Breathing Brain Core -->
+                <div class="arc-reactor-container">
+                    <!-- Ambient glow aura behind reactor -->
+                    <div class="reactor-aura"></div>
+                    <div class="reactor-aura reactor-aura-2"></div>
+                    <svg class="arc-reactor" viewBox="0 0 400 400">
+                        <defs>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <filter id="glow-intense">
+                                <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+                                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <filter id="glow-wide">
+                                <feGaussianBlur stdDeviation="12" result="coloredBlur"/>
+                                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                            <radialGradient id="core-gradient" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#00c8e8" stop-opacity="0.4"/>
+                                <stop offset="40%" stop-color="#00c8e8" stop-opacity="0.15"/>
+                                <stop offset="100%" stop-color="#00c8e8" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+
+                        <!-- Expanding ripple rings (breathing outward) -->
+                        <circle class="ripple-ring" cx="200" cy="200" r="60" fill="none" stroke="rgba(0,200,232,0.15)" stroke-width="0.5"/>
+                        <circle class="ripple-ring ripple-2" cx="200" cy="200" r="60" fill="none" stroke="rgba(0,200,232,0.1)" stroke-width="0.5"/>
+                        <circle class="ripple-ring ripple-3" cx="200" cy="200" r="60" fill="none" stroke="rgba(0,200,232,0.08)" stroke-width="0.5"/>
+
+                        <!-- Energy rays radiating from center -->
+                        <g class="energy-rays" id="energy-rays"></g>
+
+                        <!-- Outer decorative ring -->
+                        <circle cx="200" cy="200" r="190" fill="none" stroke="rgba(0,200,232,0.08)" stroke-width="1"/>
+                        <!-- Tick marks on outer ring -->
+                        <g class="arc-ticks" id="arc-ticks"></g>
+
+                        <!-- Calendar arc (outer ring) — 24h clock -->
+                        <circle class="arc-ring arc-ring-outer" cx="200" cy="200" r="175"
+                                fill="none" stroke="rgba(0,200,232,0.1)" stroke-width="18"/>
+                        <circle class="arc-ring-progress" id="arc-calendar" cx="200" cy="200" r="175"
+                                fill="none" stroke="rgba(0,200,232,0.25)" stroke-width="18"
+                                stroke-dasharray="1099.56" stroke-dashoffset="1099.56"
+                                stroke-linecap="round" transform="rotate(-90 200 200)"/>
+                        <!-- Time marker on calendar ring -->
+                        <circle class="time-marker" id="time-marker" cx="200" cy="25" r="4"
+                                fill="#00c8e8" filter="url(#glow)"/>
+
+                        <!-- CPU arc (middle ring) -->
+                        <circle cx="200" cy="200" r="145" fill="none" stroke="rgba(179,136,255,0.1)" stroke-width="12"/>
+                        <circle class="arc-ring-progress" id="arc-cpu" cx="200" cy="200" r="145"
+                                fill="none" stroke="var(--accent-purple)" stroke-width="12"
+                                stroke-dasharray="911.06" stroke-dashoffset="911.06"
+                                stroke-linecap="round" transform="rotate(-90 200 200)"
+                                opacity="0.7"/>
+                        <!-- RAM arc (inner ring) -->
+                        <circle cx="200" cy="200" r="125" fill="none" stroke="rgba(0,200,232,0.1)" stroke-width="12"/>
+                        <circle class="arc-ring-progress" id="arc-ram" cx="200" cy="200" r="125"
+                                fill="none" stroke="var(--accent-cyan)" stroke-width="12"
+                                stroke-dasharray="785.4" stroke-dashoffset="785.4"
+                                stroke-linecap="round" transform="rotate(-90 200 200)"
+                                opacity="0.7"/>
+                        <!-- GPU arc (innermost ring) -->
+                        <circle cx="200" cy="200" r="105" fill="none" stroke="rgba(0,230,118,0.1)" stroke-width="10"/>
+                        <circle class="arc-ring-progress" id="arc-gpu" cx="200" cy="200" r="105"
+                                fill="none" stroke="var(--accent-green)" stroke-width="10"
+                                stroke-dasharray="659.73" stroke-dashoffset="659.73"
+                                stroke-linecap="round" transform="rotate(-90 200 200)"
+                                opacity="0.7"/>
+
+                        <!-- Inner spinning rings (faster, more dramatic) -->
+                        <circle class="arc-spin" cx="200" cy="200" r="88"
+                                fill="none" stroke="rgba(0,200,232,0.12)" stroke-width="1"
+                                stroke-dasharray="8 15 25 10"/>
+                        <circle class="arc-spin-reverse" cx="200" cy="200" r="82"
+                                fill="none" stroke="rgba(179,136,255,0.08)" stroke-width="1"
+                                stroke-dasharray="15 25 5 35"/>
+                        <circle class="arc-spin-fast" cx="200" cy="200" r="68"
+                                fill="none" stroke="rgba(0,200,232,0.1)" stroke-width="0.5"
+                                stroke-dasharray="3 8 12 5"/>
+
+                        <!-- Neural web pattern inside core -->
+                        <g class="neural-web" id="neural-web" opacity="0.3"></g>
+
+                        <!-- Center core — multi-layered breathing -->
+                        <circle cx="200" cy="200" r="55" fill="url(#core-gradient)"
+                                stroke="rgba(0,200,232,0.15)" stroke-width="1"/>
+                        <circle class="core-pulse" cx="200" cy="200" r="45"
+                                fill="rgba(0,200,232,0.04)" stroke="rgba(0,200,232,0.25)" stroke-width="1.5"/>
+                        <circle class="core-pulse-inner" cx="200" cy="200" r="30"
+                                fill="rgba(0,200,232,0.06)" stroke="rgba(0,200,232,0.3)" stroke-width="1"/>
+                        <!-- Core center point with intense glow -->
+                        <circle cx="200" cy="200" r="12" fill="rgba(0,200,232,0.15)" filter="url(#glow-wide)"/>
+                        <circle cx="200" cy="200" r="8" fill="rgba(0,200,232,0.3)" filter="url(#glow-intense)"/>
+                        <circle class="core-center-dot" cx="200" cy="200" r="4" fill="#00c8e8" filter="url(#glow-intense)"/>
+                    </svg>
+                    <!-- Center status text overlay -->
+                    <div class="arc-center-info">
+                        <div class="arc-state" id="arc-state">STANDBY</div>
+                        <div class="arc-uptime" id="arc-uptime">0.0h</div>
+                        <div class="arc-interactions" id="arc-interactions">0 interactions</div>
+                    </div>
+                    <!-- Ring labels -->
+                    <div class="ring-label ring-label-cpu" id="ring-label-cpu">CPU 0%</div>
+                    <div class="ring-label ring-label-ram" id="ring-label-ram">RAM 0%</div>
+                    <div class="ring-label ring-label-gpu" id="ring-label-gpu">GPU 0%</div>
+                </div>
+
+                <!-- Synaptic Lines SVG -->
+                <svg class="synapse-svg" id="synapse-svg">
+                    <!-- Lines drawn dynamically by JS -->
+                </svg>
+
+                <!-- Navigation Nodes (hexagonal around reactor) -->
+                <div class="nav-nodes-container" id="nav-nodes-container">
+                    <div class="nav-node" id="node-voice-log" data-page="page-voice-log" style="top: 18%; left: 50%;">
+                        <div class="nav-node-circle">
+                            <span class="nav-node-icon">🎙</span>
+                        </div>
+                        <span class="nav-node-label">VOICE LOG</span>
+                    </div>
+                    <div class="nav-node" id="node-brain" data-page="page-brain" style="top: 30%; left: 75%;">
+                        <div class="nav-node-circle">
+                            <span class="nav-node-icon">◎</span>
+                        </div>
+                        <span class="nav-node-label">BRAIN</span>
+                    </div>
+                    <div class="nav-node" id="node-briefing" data-page="page-briefing" style="top: 65%; left: 75%;">
+                        <div class="nav-node-circle">
+                            <span class="nav-node-icon">☼</span>
+                        </div>
+                        <span class="nav-node-label">BRIEFING</span>
+                    </div>
+                    <div class="nav-node" id="node-projects" data-page="page-projects" style="top: 80%; left: 50%;">
+                        <div class="nav-node-circle">
+                            <span class="nav-node-icon">📁</span>
+                        </div>
+                        <span class="nav-node-label">PROJECTS</span>
+                    </div>
+                    <div class="nav-node" id="node-ide" data-page="page-ide" data-fullscreen="true" style="top: 65%; left: 25%;">
+                        <div class="nav-node-circle">
+                            <span class="nav-node-icon">_&gt;</span>
+                        </div>
+                        <span class="nav-node-label">CLAUDE IDE</span>
+                    </div>
+                    <div class="nav-node" id="node-settings" data-page="page-settings" style="top: 30%; left: 25%;">
+                        <div class="nav-node-circle">
+                            <span class="nav-node-icon">⚙</span>
+                        </div>
+                        <span class="nav-node-label">SETTINGS</span>
+                    </div>
+                </div>
+
+                <!-- Data Islands — draggable neural nodes -->
+                <div class="data-island" id="island-weather" data-color="cyan">
+                    <div class="island-ring"></div>
+                    <div class="island-content">
+                        <div class="island-icon" id="weather-icon">☀</div>
+                        <div class="island-value" id="weather-temp">--°</div>
+                        <div class="island-detail" id="weather-desc">Loading...</div>
+                        <div class="island-extra" id="weather-details"></div>
+                    </div>
+                    <div class="island-label">WEATHER</div>
+                </div>
+
+                <div class="data-island" id="island-calendar" data-color="green">
+                    <div class="island-ring"></div>
+                    <div class="island-content">
+                        <div class="island-value" id="cal-countdown">--</div>
+                        <div class="island-detail" id="cal-event-name">No events</div>
+                        <div class="island-extra" id="cal-event-time"></div>
+                    </div>
+                    <div class="island-label">SCHEDULE</div>
+                </div>
+
+                <div class="data-island" id="island-email" data-color="red">
+                    <div class="island-ring"></div>
+                    <div class="island-content">
+                        <div class="island-icon">✉</div>
+                        <div class="island-value"><span class="email-badge" id="email-badge">0</span></div>
+                        <div class="island-extra email-stack" id="email-stack"></div>
+                    </div>
+                    <div class="island-label">COMMS</div>
+                </div>
+
+                <div class="data-island" id="island-spotify" data-color="spotify">
+                    <div class="island-ring"></div>
+                    <div class="island-content">
+                        <div class="vinyl-disc" id="vinyl-disc">
+                            <div class="vinyl-label" id="vinyl-label">♪</div>
+                        </div>
+                        <div class="island-detail" id="spotify-track">Nothing playing</div>
+                        <div class="island-extra" id="spotify-artist"></div>
+                        <div class="island-extra spotify-controls">
+                            <button class="sp-btn" data-action="previous">⏮</button>
+                            <button class="sp-btn sp-play" data-action="play" id="sp-play-btn">▶</button>
+                            <button class="sp-btn" data-action="next">⏭</button>
+                        </div>
+                    </div>
+                    <div class="island-label">MEDIA</div>
+                </div>
+
+                <div class="data-island" id="island-claude" data-color="cyan">
+                    <div class="island-ring"></div>
+                    <div class="island-content">
+                        <div class="island-icon" style="font-size:1rem;">_&gt;</div>
+                        <div class="island-value" id="claude-usage-pct">0%</div>
+                        <div class="island-detail" id="claude-usage-model">Claude</div>
+                        <div class="island-extra" id="claude-usage-extra">
+                            <div id="claude-reset-timer">--</div>
+                            <div class="claude-usage-bar-wrap">
+                                <div class="claude-usage-bar" id="claude-usage-bar"></div>
+                            </div>
+                            <div id="claude-cost-line">$0.00</div>
+                        </div>
+                    </div>
+                    <div class="island-label">CLAUDE SESSION</div>
+                </div>
+
+                <div class="data-island island-sm" id="island-lights" data-color="amber">
+                    <div class="island-ring"></div>
+                    <div class="island-content">
+                        <div class="island-icon">💡</div>
+                        <div class="island-extra light-bulbs" id="light-bulbs"></div>
+                    </div>
+                    <div class="island-label">LIGHTS</div>
+                </div>
+
+                <div class="data-island" id="island-telemetry" data-color="purple">
+                    <div class="island-ring"></div>
+                    <div class="island-content">
+                        <div class="telemetry-grid">
+                            <div class="tele-item">
+                                <svg class="mini-ring" viewBox="0 0 60 60">
+                                    <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(179,136,255,0.15)" stroke-width="5"/>
+                                    <circle class="mini-ring-fill" id="mini-cpu" cx="30" cy="30" r="24" fill="none" stroke="var(--accent-purple)" stroke-width="5" stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round" transform="rotate(-90 30 30)"/>
+                                </svg>
+                                <span class="tele-val" id="tele-cpu">0%</span>
+                                <span class="tele-lbl">CPU</span>
+                            </div>
+                            <div class="tele-item">
+                                <svg class="mini-ring" viewBox="0 0 60 60">
+                                    <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(0,200,232,0.15)" stroke-width="5"/>
+                                    <circle class="mini-ring-fill" id="mini-ram" cx="30" cy="30" r="24" fill="none" stroke="var(--accent-cyan)" stroke-width="5" stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round" transform="rotate(-90 30 30)"/>
+                                </svg>
+                                <span class="tele-val" id="tele-ram">0%</span>
+                                <span class="tele-lbl">RAM</span>
+                            </div>
+                            <div class="tele-item">
+                                <svg class="mini-ring" viewBox="0 0 60 60">
+                                    <circle cx="30" cy="30" r="24" fill="none" stroke="rgba(0,230,118,0.15)" stroke-width="5"/>
+                                    <circle class="mini-ring-fill" id="mini-gpu" cx="30" cy="30" r="24" fill="none" stroke="var(--accent-green)" stroke-width="5" stroke-dasharray="150.8" stroke-dashoffset="150.8" stroke-linecap="round" transform="rotate(-90 30 30)"/>
+                                </svg>
+                                <span class="tele-val" id="tele-gpu">0%</span>
+                                <span class="tele-lbl">GPU</span>
+                            </div>
+                        </div>
+                        <div class="island-detail" id="tele-uptime">Uptime: --</div>
+                    </div>
+                    <div class="island-label">TELEMETRY</div>
+                </div>
+
+        </section>
+
+        <!-- Corner brackets (fixed, outside page-home) -->
+        <div class="hud-corner tl"></div>
+        <div class="hud-corner tr"></div>
+        <div class="hud-corner bl"></div>
+        <div class="hud-corner br"></div>
+
+        <!-- Bottom ticker (outside page-home so it stays fixed during pan) -->
+        <div class="hud-ticker">
+            <div class="ticker-content" id="ticker-content">
+                JARVIS SYSTEMS ONLINE ── INITIALIZING DATA FEEDS...
+            </div>
+        </div>
+
+        <!-- Pages Container (hidden — pages are moved into expanded-panel on demand) -->
+        <div class="pages-container">
+            <!-- BRAIN PAGE -->
+            <section id="page-brain" class="page">
+                <div class="stats-layer">
+                    <div class="stat-card">
+                        <div class="stat-value" id="brain-cost">$0.00</div>
+                        <div class="stat-label">API COST TODAY</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="brain-tokens">0k</div>
+                        <div class="stat-label">TOKENS USED</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="brain-latency">0.0s</div>
+                        <div class="stat-label">AVG LATENCY</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="brain-calls">0</div>
+                        <div class="stat-label">CONVERSATIONS</div>
+                    </div>
+                </div>
+                <div class="grid-2-col" style="margin-top: 1rem;">
+                    <div class="card">
+                        <h3>COST TRAJECTORY</h3>
+                        <canvas id="cost-chart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3>TOKEN BREAKDOWN</h3>
+                        <canvas id="token-chart"></canvas>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 1rem;">
+                    <h3>VOICE INTERACTION LOG</h3>
+                    <div class="table-container">
+                        <table id="voice-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Direction</th>
+                                    <th>Message</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BRIEFING PAGE -->
+            <section id="page-briefing" class="page">
+                <div class="briefing-header">
+                    <h2 id="briefing-greeting" class="text-cyan">Generating Briefing...</h2>
+                    <p id="briefing-weather" style="opacity: 0.8"></p>
+                    <div class="briefing-actions" style="margin-top:1rem;">
+                        <button class="action-btn" id="btn-refresh-briefing">Refresh Data</button>
+                        <button class="action-btn border-orange" id="btn-audio-briefing">Audio Briefing</button>
+                    </div>
+                </div>
+                <div class="card border-orange" style="margin-top:2rem">
+                    <h3>AGENDA</h3>
+                    <div id="briefing-agenda-list" class="timeline"></div>
+                </div>
+                <div class="card border-cyan" style="margin-top:1rem">
+                    <h3>NEWS INTEL</h3>
+                    <div id="briefing-news-list"></div>
+                </div>
+                <div class="card border-purple" style="margin-top:1rem">
+                    <h3>MEMORY & PRIORITIES</h3>
+                    <ul id="briefing-memory-list" class="sleek-list"></ul>
+                </div>
+                <div class="card border-green" style="margin-top:1rem">
+                    <h3>SUGGESTED ACTIONS</h3>
+                    <div id="briefing-suggestions-list" class="action-grid"></div>
+                </div>
+
+                <!-- ── Live Jarvis state — agentic panels ─────────────── -->
+
+                <div id="agent-pending-plan-card" class="card" style="margin-top:1rem; display:none; border-color:#FFB800; box-shadow: 0 0 24px rgba(255,184,0,0.18);">
+                    <h3 style="color:#FFB800">⚠ PENDING PLAN</h3>
+                    <div id="agent-plan-summary" style="font-weight:600; margin-top:6px;"></div>
+                    <ol id="agent-plan-steps" style="margin-top:8px; padding-left: 1.2rem; opacity:0.85;"></ol>
+                    <div style="margin-top:12px; display:flex; gap:8px;">
+                        <button class="action-btn" id="btn-plan-confirm">CONFIRM</button>
+                        <button class="action-btn border-orange" id="btn-plan-cancel">CANCEL</button>
+                    </div>
+                </div>
+
+                <div class="card border-cyan" style="margin-top:1rem">
+                    <h3>ACTIVE TASKS</h3>
+                    <div id="agent-tasks-list"></div>
+                </div>
+
+                <div class="card border-orange" style="margin-top:1rem">
+                    <h3>WATCHES</h3>
+                    <div id="agent-watches-list"></div>
+                </div>
+
+                <div class="card border-purple" style="margin-top:1rem">
+                    <h3>ROUTINES</h3>
+                    <div id="agent-routines-list" class="action-grid"></div>
+                    <div style="margin-top:8px; opacity:0.6; font-size:0.8rem; letter-spacing:1px;">
+                        Click a routine to run it now. Edit data/routines.yaml for new ones.
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:1rem; opacity:0.85">
+                    <h3 style="opacity:0.7">SCHEDULED JOBS</h3>
+                    <div id="agent-scheduler-list" style="font-family: 'Share Tech Mono', monospace; font-size:0.8rem; line-height:1.6;"></div>
+                </div>
+            </section>
+
+            <!-- PROJECTS PAGE -->
+            <section id="page-projects" class="page">
+                <div class="card hero-card" id="active-project-card">
+                    <div class="proj-header">
+                        <h2 id="proj-name">PROJECT NAME</h2>
+                        <span class="badge" id="proj-status">STATUS</span>
+                    </div>
+                    <p id="proj-desc" style="opacity: 0.8;">...</p>
+                    <div class="proj-meta">
+                        <span><b class="text-cyan">Branch:</b> <span id="proj-branch">...</span></span>
+                        <span><b class="text-cyan">Path:</b> <span id="proj-path">...</span></span>
+                    </div>
+                    <select id="project-switcher" class="styled-select" style="margin-top:10px;"></select>
+                </div>
+                <div class="grid-2-col" style="margin-top: 1rem;">
+                    <div class="card border-purple">
+                        <h3>GIT ACTIVITY</h3>
+                        <div id="git-log" class="git-timeline"></div>
+                    </div>
+                    <div class="card border-orange">
+                        <h3>TODO MATRIX</h3>
+                        <div class="todo-input-row">
+                            <input type="text" id="new-todo-input" placeholder="New objective..." class="styled-input">
+                            <button id="btn-add-todo" class="action-btn">ADD</button>
+                        </div>
+                        <ul id="todo-list" class="sleek-list"></ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CLAUDE IDE PAGE -->
+            <section id="page-ide" class="page file-panel-layout">
+                <div class="panel" id="ide-explorer">
+                    <div class="panel-header">EXPLORER</div>
+                    <div class="explorer-content" id="file-tree"></div>
+                </div>
+                <div class="panel-resizer" id="resizer-1"></div>
+                <div class="panel" id="ide-terminal">
+                    <div class="panel-header" id="terminal-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="term-dot" id="term-dot"></span>
+                            <span>CLAUDE TERMINAL</span>
+                            <span class="term-status" id="term-status">READY</span>
+                        </div>
+                        <div style="display:flex; gap:4px;">
+                            <button class="sm-btn" id="term-clear">CLEAR</button>
+                            <button class="sm-btn term-stop-btn" id="term-stop" style="display:none;">STOP</button>
+                            <button class="sm-btn" id="term-toggle">RAW/MD</button>
+                        </div>
+                    </div>
+                    <!-- Session Stats Bar -->
+                    <div class="session-stats-bar" id="session-stats-bar">
+                        <div class="stat-item" title="Active model">
+                            <span class="stat-icon">◎</span>
+                            <span id="stat-model">--</span>
+                        </div>
+                        <div class="stat-item" title="Total cost this session">
+                            <span class="stat-icon">$</span>
+                            <span id="stat-cost">0.00</span>
+                        </div>
+                        <div class="stat-item" title="Input tokens (cache read / cache write)">
+                            <span class="stat-icon">↓</span>
+                            <span id="stat-input-tokens">0</span>
+                        </div>
+                        <div class="stat-item" title="Output tokens">
+                            <span class="stat-icon">↑</span>
+                            <span id="stat-output-tokens">0</span>
+                        </div>
+                        <div class="stat-item" title="Messages sent">
+                            <span class="stat-icon">✦</span>
+                            <span id="stat-messages">0 msgs</span>
+                        </div>
+                        <div class="stat-item" id="stat-context-item" title="Messages in context window — clear when this gets large">
+                            <span class="stat-icon">⊞</span>
+                            <span id="stat-context">0 ctx</span>
+                        </div>
+                        <div class="stat-item stat-rate-limit" id="stat-rate-limit" title="Rate limit status">
+                            <span class="rate-dot ok" id="rate-dot"></span>
+                            <span id="stat-rate-text">--</span>
+                        </div>
+                    </div>
+                    <div class="terminal-output" id="terminal-output"></div>
+                    <div class="image-preview" id="image-preview">
+                        <img id="preview-thumb" src="" alt="screenshot">
+                        <button class="sm-btn remove-img" id="btn-remove-img">REMOVE</button>
+                        <span style="margin-left:auto; font-size:0.8rem; opacity:0.5;">Sent with next message</span>
+                    </div>
+                    <div class="terminal-input-wrapper">
+                        <textarea id="terminal-input" placeholder="Enter command for Claude... (Ctrl+V to paste screenshot)" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="panel-resizer" id="resizer-2"></div>
+                <div class="panel" id="ide-preview">
+                    <div class="panel-header">PREVIEW: <span id="preview-filename">None</span></div>
+                    <div class="preview-content">
+                        <pre><code id="preview-code" class="language-python">Select a file to preview.</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS PAGE -->
+            <section id="page-settings" class="page">
+                <div class="grid-2-col">
+                    <div class="card">
+                        <h3>API LINK STATUS</h3>
+                        <div id="settings-api-status" class="settings-grid">Loading...</div>
+                        <button class="action-btn" id="btn-refresh-status" style="margin-top:10px;">Check Status</button>
+                    </div>
+                    <div class="card border-orange">
+                        <h3>SYSTEM PARAMS</h3>
+                        <div class="form-group">
+                            <label>TTS Engine</label>
+                            <select id="set-tts-engine" class="styled-select">
+                                <option value="kokoro">Kokoro (Local)</option>
+                                <option value="elevenlabs">ElevenLabs</option>
+                                <option value="edge">Edge TTS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Default Language</label>
+                            <select id="set-language" class="styled-select">
+                                <option value="en">English</option>
+                                <option value="ro">Romanian</option>
+                            </select>
+                        </div>
+                        <button class="action-btn text-green" id="btn-save-settings" style="margin-top:10px;">SAVE CONFIG</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VOICE LOG PAGE -->
+            <section id="page-voice-log" class="page">
+                <div class="stats-layer">
+                    <div class="stat-card">
+                        <div class="stat-value" id="vlog-count">0</div>
+                        <div class="stat-label">INTERACTIONS TODAY</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="vlog-last-time">--</div>
+                        <div class="stat-label">LAST INTERACTION</div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 1rem; max-height: 60vh; overflow-y: auto;">
+                    <h3>CONVERSATION FEED</h3>
+                    <div id="vlog-feed" class="vlog-feed">
+                        <div style="color: var(--text-muted); padding: 2rem; text-align: center;">Loading voice log...</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Expanded Panel (Level 1) -->
+    <div class="expanded-panel" id="expanded-panel">
+        <div class="expanded-panel-corners"></div>
+        <div class="expanded-panel-header">
+            <span class="expanded-panel-title" id="expanded-panel-title">PAGE</span>
+            <button class="expanded-panel-close" id="expanded-panel-close" title="Close">&times;</button>
+        </div>
+        <div class="expanded-panel-body" id="expanded-panel-body">
+            <!-- Page content injected here -->
+        </div>
+    </div>
+
+    <!-- Image fullscreen overlay -->
+    <div class="img-overlay" id="img-overlay" onclick="this.style.display='none'">
+        <img id="overlay-img" src="">
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- External Libs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    
+    <!-- App Scripts -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/pages/home.js"></script>
+    <script src="/static/js/pages/brain.js"></script>
+    <script src="/static/js/pages/briefing.js"></script>
+    <script src="/static/js/pages/projects.js"></script>
+    <script src="/static/js/pages/ide.js"></script>
+    <script src="/static/js/pages/settings.js"></script>
+    <script src="/static/js/pages/voice-log.js"></script>
+    <script src="/static/js/pages/agent.js"></script>
+</body>
+</html>

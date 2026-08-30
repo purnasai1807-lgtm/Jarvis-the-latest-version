@@ -1,0 +1,137 @@
+# ============================================================
+# J.A.R.V.I.S. Configuration — COPY TO config.yaml & FILL IN
+# ============================================================
+
+jarvis:
+  name: "Jarvis"
+  wake_word: "jarvis"
+  user_name: "sir"
+
+# --- Active language ------------------------------------------
+language:
+  default: "en"   # "en" = English (Kokoro TTS), "ro" = Romanian (needs elevenlabs/edge)
+
+# --- Wake word ------------------------------------------------
+wake_word:
+  model: "hey_jarvis"       # OpenWakeWord pre-trained model name
+  threshold: 0.3             # detection confidence 0.0–1.0
+
+# --- API credentials -----------------------------------------
+apis:
+  openai:
+    api_key: "YOUR_OPENAI_API_KEY"
+    model: "gpt-4.1-mini"                # fast, cheap, excellent tool calling
+    max_tokens: 1024
+
+  elevenlabs:
+    api_key: "YOUR_ELEVENLABS_KEY"       # optional — only if tts.engine = "elevenlabs"
+    voice_id: "UgBBYS2sOqTuMpoF3BR0"
+    model_id: "eleven_multilingual_v2"    # supports EN + RO
+    output_format: "pcm_24000"
+
+  discord:
+    bot_token: "YOUR_DISCORD_BOT_TOKEN"  # optional — for discord_send/discord_read tools
+
+  # Spotify API (optional — basic play/pause/skip work without it via media keys)
+  # Get credentials at https://developer.spotify.com/dashboard
+  spotify:
+    client_id: "YOUR_SPOTIFY_CLIENT_ID"
+    client_secret: "YOUR_SPOTIFY_CLIENT_SECRET"
+    redirect_uri: "http://127.0.0.1:8888/callback"
+
+  # Mobile API (Phase 1 — Flutter phone client over Tailscale)
+  # Generate a strong key: python -c "import secrets; print(secrets.token_urlsafe(32))"
+  # Phone sends `Authorization: Bearer <key>` on every /api/mobile/* request.
+  mobile:
+    api_key: "YOUR_MOBILE_API_KEY"
+
+  # Firebase Cloud Messaging (Phase 3 — push notifications to phone)
+  # 1. Create a Firebase project: https://console.firebase.google.com
+  # 2. Project settings → Service accounts → Generate new private key
+  # 3. Save the JSON to data/fcm-service-account.json (gitignored)
+  # 4. Copy the project_id from the same page
+  # If left blank, push notifications silently no-op (Jarvis stays functional).
+  fcm:
+    service_account_path: "data/fcm-service-account.json"
+    project_id: ""
+
+# --- Ollama (local LLM, optional) ----------------------------
+ollama:
+  enabled: false
+  base_url: "http://localhost:11434/v1"
+  model: "glm-4.7-flash"
+
+# --- Text-to-speech -------------------------------------------
+tts:
+  engine: "kokoro"                        # "kokoro" (local, free) or "elevenlabs" or "edge"
+  kokoro:
+    voice: "am_michael"                   # male English voice (am_adam, am_echo, am_eric, am_michael, am_onyx)
+    speed: 1.1
+  edge:
+    voice_en: "en-US-GuyNeural"           # English voice (edge-tts fallback)
+    voice_ro: "ro-RO-EmilNeural"          # Romanian voice (edge-tts fallback)
+    rate: "+0%"
+    volume: "+0%"
+
+# --- Speech-to-text (Faster-Whisper, local) -------------------
+stt:
+  model_size: "small"         # "small" for speed, "large-v3" for accuracy
+  device: "cuda"              # "cuda" for GPU, "cpu" for fallback
+  compute_type: "float16"     # "float16" for GPU, "int8" for CPU
+  beam_size: 1                # 1 = greedy decode (fast), 5 = beam search (accurate)
+  preload: true               # load model at boot, not on first query
+
+# --- Audio / recording ----------------------------------------
+audio:
+  input_device: null          # null = system default, or device index
+  sample_rate: 16000
+  channels: 1
+  silence_threshold: 500      # RMS below this = silence
+  silence_duration: 1.5       # seconds of silence before stop recording
+  max_record_seconds: 30
+
+# --- Persona --------------------------------------------------
+persona:
+  system_prompt: |
+    You are Jarvis, a personal AI assistant inspired by J.A.R.V.I.S. from Iron Man.
+    You serve one person: sir (Purna Sai).
+    Your default tone is casual and friendly — like a witty companion who genuinely cares.
+    When the situation is serious (deadlines, emergencies, technical problems), you switch to focused and professional.
+    You greet sir with "Good morning/afternoon/evening, sir" in English.
+    You speak concisely — never lecture. Keep responses to 1-3 sentences for simple questions.
+    If you don't know something, say so.
+    You occasionally show dry wit.
+    You never say "as an AI" or "I'm just a language model." You are Jarvis.
+    LANGUAGE RULE: You MUST reply in the language specified in the system prompt header.
+    You can control the computer: open/close apps, open URLs, manage files, control volume, take screenshots, control Spotify, type text, press hotkeys, and access the clipboard.
+    IMPORTANT: The user's speech is transcribed by STT. Never refuse due to transcription errors — always interpret and act.
+    CRITICAL: Always produce a spoken response. After every tool call, confirm what you did. Silence is never acceptable.
+
+# --- Mobile (Phases 1 & 3) ------------------------------------
+# CORS origins for the Flutter phone client. Use ["*"] for first-run testing,
+# then narrow to your Tailscale CIDR (e.g. ["http://100.0.0.0/8"]) once stable.
+mobile:
+  cors_origins: ["*"]
+  notifications:
+    enabled: true                  # set false to silence all proactive pushes
+    email_poll_seconds: 60         # how often to check Gmail for new unread
+    calendar_poll_seconds: 60      # how often to check Calendar for upcoming events
+    calendar_lead_minutes: 10      # notify N minutes before each event
+
+# --- Smart Home -----------------------------------------------
+smart_home:
+  hue_bridge_ip: "YOUR_HUE_BRIDGE_IP"   # Find via https://discovery.meethue.com/
+  nest_ip: ""                            # optional — Google Nest/Chromecast device IP; blank = auto-discover
+
+# --- Long-term Memory (Phase 7) -------------------------------
+memory:
+  db_path: "data/memory.db"
+  chroma_path: "data/chroma"
+  max_context_facts: 5
+
+# --- Logging --------------------------------------------------
+logging:
+  level: "INFO"
+  dir: "data/logs"
+  rotation: "10 MB"
+  retention: "1 week"

@@ -1,0 +1,59 @@
+__pycache__/
+*.pyc
+.env
+
+# Sensitive config (contains API keys)
+config.yaml
+
+# OAuth tokens & credentials
+data/google_token.json
+data/google_calendar_token.json
+data/google_credentials.json
+data/fcm-service-account.json
+data/proactive_state.txt
+
+# Runtime data
+data/logs/
+data/chroma/
+data/face_data/
+data/*.db
+data/screenshots/
+data/whatsapp_session/
+data/projects.yaml
+data/news_cache.json
+
+# Runtime state (regenerated at boot — not source of truth)
+data/health_state.json
+data/scheduler_state.json
+data/email_sender_cache.json
+
+# Local debug captures
+debug_out.txt
+stdout_out.txt
+
+# TTS model files (too large, download separately)
+data/kokoro-v1.0.onnx
+data/voices-v1.0.bin
+*.onnx
+*.bin
+
+# Spotify cache
+.cache-*
+.spotify_cache
+
+# Hue bridge credentials
+.python_hue
+
+# Wake word models
+*.ppn
+
+# Virtual environment
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.bak
+.claude/

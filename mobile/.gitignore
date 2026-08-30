@@ -1,0 +1,32 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+.fvm/
+.fvmrc
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Generated platform code (run `flutter create .` to regenerate)
+android/.gradle/
+android/app/build/
+android/local.properties
+android/key.properties
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/Runner.xcworkspace/xcuserdata/
+
+# OS
+.DS_Store
+Thumbs.db

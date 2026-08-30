@@ -1,0 +1,63 @@
+# J.A.R.V.I.S. Phase 1 — Voice Foundation
+# ----------------------------------------
+
+# Wake word (open-source, no API key)
+openwakeword>=0.6
+onnxruntime>=1.15
+
+# Speech-to-text (local, GPU-accelerated)
+faster-whisper>=1.0
+
+# LLM brain (OpenAI API — GPT-4.1 mini)
+# anthropic not needed — removed in favour of OpenAI
+
+# Text-to-speech (kokoro = free local, edge-tts = fallback, elevenlabs = optional)
+edge-tts>=7.0
+elevenlabs>=1.0
+
+# Audio capture & playback
+sounddevice>=0.5
+numpy>=1.26
+av>=12.0                # MP3 decode for edge-tts fallback
+
+# Phase 3: Browser Automation
+playwright>=1.58          # Chromium browser automation
+duckduckgo-search>=8.0    # web search (no API key)
+beautifulsoup4>=4.12      # HTML parsing
+youtube-transcript-api>=1.2  # YouTube transcripts
+requests>=2.31            # HTTP fetching
+
+# Phase 2: OS & App Control
+pyautogui>=0.9.54       # keyboard/mouse automation
+pyperclip>=1.9          # clipboard access
+pywin32>=308            # active window watcher (core/context.py) + foreground app detection
+PySide6>=6.5            # Qt6 binding — anti-aliased HUD overlay (replaces tkinter for ui.hud)
+pycaw>=20240210         # Windows volume control (precise)
+comtypes>=1.4           # COM interface (pycaw dependency)
+mss>=9.0                # fast multi-monitor screenshots
+Pillow>=10.0            # image processing
+spotipy>=2.24           # Spotify API (optional, for search+play)
+
+# Phase 7: Long-term Memory
+chromadb>=0.5                 # vector store for semantic recall (FTS5 fallback if unavailable)
+
+# Ollama / OpenAI-compatible API
+openai>=1.30              # client for ollama's OpenAI-compatible endpoint
+
+# Phase 8+: Local TTS
+kokoro-onnx>=0.4               # Kokoro 82M local TTS (ONNX, no API key)
+soundfile>=0.12                 # audio I/O for Kokoro
+
+# Phase 9: Web Dashboard
+fastapi>=0.100
+uvicorn>=0.30
+websockets>=12.0
+psutil>=5.9
+python-multipart>=0.0.9   # mobile /api/mobile/transcribe multipart upload
+
+# Phase 3 (mobile): Firebase Cloud Messaging service-account JWT signing
+google-auth>=2.30         # mints OAuth2 access token for FCM HTTP v1
+
+# Config & utilities
+pyyaml>=6.0
+loguru>=0.7

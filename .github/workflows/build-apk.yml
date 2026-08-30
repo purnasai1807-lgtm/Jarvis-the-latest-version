@@ -1,0 +1,235 @@
+name: Build Android APK
+
+# Builds a debug-signed APK that can be sideloaded onto a phone for UI / lite-mode
+# preview. The APK is uploaded as a workflow artifact — download it from the
+# Actions tab on github.com/purnasai1807-lgtm/Jarvis-the-latest-version/actions.
+#
+# Triggers:
+#   - push to master (any change under mobile/ or this workflow file)
+#   - manual run (Actions tab → Build Android APK → Run workflow)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.32.0"
+          cache: true
+
+      - name: Generate Android platform folder
+        working-directory: mobile
+        run: |
+          flutter create . \
+            --project-name jarvis_mobile \
+            --org com.myjarvis \
+            --platforms=android
+          ls -la android/
+
+      - name: Patch AndroidManifest with required permissions
+        working-directory: mobile
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          python3 - <<'PY'
+          import re, pathlib
+          p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
+          src = p.read_text()
+
+          extra_perms = """
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+              <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+              <uses-permission android:name="android.permission.WAKE_LOCK"/>
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+          """
+
+          # Insert permissions just before <application> if not already present.
+          if "RECORD_AUDIO" not in src:
+              src = re.sub(
+                  r"(<manifest[^>]*>)",
+                  r"\1" + extra_perms,
+                  src,
+                  count=1,
+              )
+
+          # Allow plain HTTP traffic (Tailscale endpoints have no TLS).
+          if "usesCleartextTraffic" not in src:
+              src = re.sub(
+                  r"(<application\b)",
+                  r'\1 android:usesCleartextTraffic="true"',
+                  src,
+                  count=1,
+              )
+
+          p.write_text(src)
+          print(src)
+          PY
+
+      - name: Patch app/build.gradle (NDK 27 + core library desugaring)
+        working-directory: mobile
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          target = None
+          for name in ["android/app/build.gradle.kts", "android/app/build.gradle"]:
+              p = pathlib.Path(name)
+              if p.exists():
+                  target = p
+                  break
+          if target is None:
+              raise SystemExit("no app/build.gradle{,.kts} found")
+
+          src = target.read_text()
+          is_kts = target.suffix == ".kts"
+
+          # 1. Bump NDK to highest version any plugin requires.
+          src = re.sub(
+              r'ndkVersion\s*=?\s*flutter\.ndkVersion',
+              'ndkVersion = "27.0.12077973"' if is_kts else 'ndkVersion "27.0.12077973"',
+              src,
+              count=1,
+          )
+
+          # 1b. Bump minSdk to 23 (record_android, just_audio, firebase_*).
+          src = re.sub(
+              r'minSdk\s*=?\s*flutter\.minSdkVersion',
+              'minSdk = 23' if is_kts else 'minSdk 23',
+              src,
+              count=1,
+          )
+
+          # 2. Enable core library desugaring inside compileOptions.
+          if "isCoreLibraryDesugaringEnabled" not in src and "coreLibraryDesugaringEnabled" not in src:
+              if is_kts:
+                  src = re.sub(
+                      r'(compileOptions\s*\{)',
+                      r'\1\n        isCoreLibraryDesugaringEnabled = true',
+                      src,
+                      count=1,
+                  )
+              else:
+                  src = re.sub(
+                      r'(compileOptions\s*\{)',
+                      r'\1\n        coreLibraryDesugaringEnabled true',
+                      src,
+                      count=1,
+                  )
+
+          # 3. Add the desugar_jdk_libs dependency. Append a new dependencies
+          #    block at the end of the file — the Flutter template doesn't
+          #    include one in app/build.gradle by default.
+          if "desugar_jdk_libs" not in src:
+              if is_kts:
+                  src += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+              else:
+                  src += "\n\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n"
+
+          target.write_text(src)
+          print(src)
+          PY
+
+      - name: Inject google-services.json from secret
+        if: env.GOOGLE_SERVICES_JSON_B64 != ''
+        working-directory: mobile
+        run: |
+          echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > android/app/google-services.json
+          echo "google-services.json injected ($(wc -c < android/app/google-services.json) bytes)"
+
+      - name: Patch Gradle files for Firebase google-services plugin
+        if: env.GOOGLE_SERVICES_JSON_B64 != ''
+        working-directory: mobile
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          # settings.gradle{,.kts} — register the plugin classpath.
+          settings = pathlib.Path("android/settings.gradle.kts")
+          if not settings.exists():
+              settings = pathlib.Path("android/settings.gradle")
+          src = settings.read_text()
+          is_kts_settings = settings.suffix == ".kts"
+          if "com.google.gms.google-services" not in src:
+              # Match `id("com.android.application") version "X" apply false`
+              # OR `id "com.android.application" version "X" apply false`.
+              pattern = r'(id\s*\(?\s*"com\.android\.application"\s*\)?\s+version\s+"[^"]+"\s+apply\s+false)'
+              if is_kts_settings:
+                  inject = '\n    id("com.google.gms.google-services") version "4.4.2" apply false'
+              else:
+                  inject = '\n    id "com.google.gms.google-services" version "4.4.2" apply false'
+              new = re.sub(pattern, r'\1' + inject, src, count=1)
+              if new == src:
+                  raise SystemExit("FATAL: settings.gradle plugin patch did not match")
+              settings.write_text(new)
+              print("Patched", settings)
+
+          # app/build.gradle{,.kts} — apply the plugin.
+          appgradle = pathlib.Path("android/app/build.gradle.kts")
+          if not appgradle.exists():
+              appgradle = pathlib.Path("android/app/build.gradle")
+          src = appgradle.read_text()
+          is_kts_app = appgradle.suffix == ".kts"
+          if "com.google.gms.google-services" not in src:
+              pattern = r'(id\s*\(?\s*"dev\.flutter\.flutter-gradle-plugin"\s*\)?)'
+              if is_kts_app:
+                  inject = '\n    id("com.google.gms.google-services")'
+              else:
+                  inject = '\n    id "com.google.gms.google-services"'
+              new = re.sub(pattern, r'\1' + inject, src, count=1)
+              if new == src:
+                  raise SystemExit("FATAL: app/build.gradle plugin patch did not match")
+              appgradle.write_text(new)
+              print("Patched", appgradle)
+          print("=== settings ===")
+          print(settings.read_text())
+          print("=== app ===")
+          print(appgradle.read_text())
+          PY
+
+      - name: Flutter pub get
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build debug APK
+        working-directory: mobile
+        run: flutter build apk --debug --target-platform android-arm64
+
+      - name: Rename APK with run number
+        working-directory: mobile
+        run: |
+          mkdir -p out
+          cp build/app/outputs/flutter-apk/app-debug.apk \
+             out/jarvis-mobile-${{ github.run_number }}.apk
+          ls -la out/
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-mobile-apk
+          path: mobile/out/*.apk
+          retention-days: 14
+          if-no-files-found: error
