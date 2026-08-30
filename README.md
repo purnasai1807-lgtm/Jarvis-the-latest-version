@@ -36,7 +36,7 @@
 | Vision | `see_screen`, `see_all_screens`, `find_on_screen`, `read_screen_text` |
 | Spotify | `spotify_control`, `spotify_now_playing`, `spotify_volume`, `spotify_queue` |
 | Smart Home | `lights_control`, `hue_scene`, `hue_status`, `speaker_announce`, `speaker_volume`, `speaker_control` |
-| Communications | `read_emails`, `send_email`, `get_schedule`, `create_event`, `discord_send`, `discord_read`, `whatsapp_send`, `whatsapp_read` |
+| Communications | `read_emails`, `send_email`, `get_schedule`, `create_event`, `discord_send`, `discord_read`, `whatsapp_send`, `whatsapp_read`, `linkedin_post`, `linkedin_send_message`, `instagram_send_message`, `instagram_read_messages` |
 | Memory | `remember_fact`, `recall_fact`, `forget_fact`, `list_memories`, `morning_briefing` |
 | Claude Code | `run_claude_code` |
 

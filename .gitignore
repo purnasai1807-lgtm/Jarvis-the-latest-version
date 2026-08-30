@@ -12,6 +12,10 @@ data/google_credentials.json
 data/fcm-service-account.json
 data/proactive_state.txt
 
+# Browser session cookies (LinkedIn/Instagram persistent login)
+data/linkedin_profile/
+data/instagram_profile/
+
 # Runtime data
 data/logs/
 data/chroma/

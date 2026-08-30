@@ -72,6 +72,14 @@ Target latency: **< 3-5 seconds** from end of speech to hearing the response.
 - win32gui finds/focuses the window, Ctrl+N to open search, clipboard-paste contact + message, Enter to send
 - Handles unicode/Romanian characters via clipboard paste
 
+**LinkedIn** (2 tools): `linkedin_post`, `linkedin_send_message`
+- Playwright with a persistent browser profile (`data/linkedin_profile`) — cookies survive restarts
+- First run opens a visible Chromium window for a one-time manual login; headless afterwards would still need the same profile dir
+
+**Instagram** (2 tools): `instagram_send_message`, `instagram_read_messages`
+- Same persistent-profile Playwright pattern (`data/instagram_profile`)
+- Reading messages takes a screenshot of the DM thread and asks OpenAI Vision to transcribe it (like `whatsapp_read`)
+
 ---
 
 ## Architecture
