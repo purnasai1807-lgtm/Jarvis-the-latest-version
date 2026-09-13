@@ -50,7 +50,9 @@ class _AskScreenState extends ConsumerState<AskScreen> {
     final user = _Turn.user(text);
     final reply = _Turn.assistant();
     setState(() {
-      _turns..add(user)..add(reply);
+      _turns
+        ..add(user)
+        ..add(reply);
       _streaming = true;
     });
 
@@ -70,7 +72,9 @@ class _AskScreenState extends ConsumerState<AskScreen> {
       stream = brain.ask(text: text, language: _language);
     } else {
       stream = widget.api.ask(
-        text: text, language: _language, playOnPc: _playOnPc,
+        text: text,
+        language: _language,
+        playOnPc: _playOnPc,
       );
     }
 
@@ -149,8 +153,9 @@ class _AskScreenState extends ConsumerState<AskScreen> {
           SwitchListTile(
             value: _playOnPc,
             onChanged: (v) => setState(() => _playOnPc = v),
-            title: const Text('Speak on PC', style: TextStyle(color: Colors.white)),
-            activeColor: kAccent,
+            title: const Text('Speak on PC',
+                style: TextStyle(color: Colors.white)),
+            activeThumbColor: kAccent,
             dense: true,
           ),
           Container(

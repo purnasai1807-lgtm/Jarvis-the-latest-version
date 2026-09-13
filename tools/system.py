@@ -75,6 +75,9 @@ def open_app(name: str) -> str:
     """Launch an application by name."""
     key = name.lower().strip()
 
+    if not key:
+        return "No app name provided."
+
     # 1) Discord — special Squirrel launcher
     if key in ("discord",):
         if os.path.isfile(_DISCORD_EXE):
@@ -97,7 +100,24 @@ def open_app(name: str) -> str:
         except Exception as exc:
             logger.error(f"open_app({name}) via map failed: {exc}")
 
-    # 4) Search Start Menu shortcuts
+    # 4) Search the common install locations for EXEs before falling back
+    for exe_name in (f"{key}.exe", f"{name}.exe"):
+        candidates = [
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", exe_name),
+            os.path.join(os.environ.get("PROGRAMFILES", ""), exe_name),
+            os.path.join(os.environ.get("PROGRAMFILES(X86)", ""), exe_name),
+            os.path.join(os.environ.get("APPDATA", ""), "Microsoft", "Windows", "Start Menu", "Programs", exe_name),
+        ]
+        for candidate in candidates:
+            if candidate and os.path.isfile(candidate):
+                try:
+                    os.startfile(candidate)
+                    logger.info(f"Opened app: {name} via file path {candidate}")
+                    return f"Opened {name}."
+                except Exception as exc:
+                    logger.warning(f"open_app({name}) file launch failed: {exc}")
+
+    # 5) Search Start Menu shortcuts
     for start_dir in _START_MENU_DIRS:
         if not os.path.isdir(start_dir):
             continue
@@ -110,12 +130,12 @@ def open_app(name: str) -> str:
                 except Exception as exc:
                     logger.error(f"open_app({name}) via shortcut failed: {exc}")
 
-    # 5) Search installed UWP apps dynamically
+    # 6) Search installed UWP apps dynamically
     uwp_result = _find_and_launch_uwp(key)
     if uwp_result:
         return uwp_result
 
-    # 6) Hail Mary — let Windows figure it out
+    # 7) Hail Mary — let Windows figure it out
     try:
         subprocess.Popen(f'start "" "{name}"', shell=True)
         return f"Attempted to open {name}."
@@ -192,7 +212,13 @@ def close_app(name: str) -> str:
     if result.returncode == 0:
         logger.info(f"Closed app: {name} (process={process})")
         return f"Closed {name}."
-    return f"Could not close {name}: {result.stderr.strip()}"
+
+    stderr = (result.stderr or "").strip()
+    if "not found" in stderr.lower() or "not running" in stderr.lower():
+        logger.info(f"App already not running: {name} (process={process})")
+        return f"{name} is not running."
+
+    return f"Could not close {name}: {stderr or 'unknown error'}"
 
 
 def volume_control(action: str, level: int = None) -> str:

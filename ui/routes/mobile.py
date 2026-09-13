@@ -618,6 +618,15 @@ async def ask(req: AskRequest):
                 full_reply_chunks.append(chunk)
                 event = json.dumps({"type": "chunk", "text": chunk})
                 asyncio.run_coroutine_threadsafe(queue.put(f"data: {event}\n\n"), loop)
+            if not full_reply_chunks:
+                fallback = (
+                    "Nu am putut genera un raspuns. Incercati din nou."
+                    if req.language == "ro"
+                    else "I could not generate a response. Please try again."
+                )
+                logger.error("Mobile /ask brain stream produced no response")
+                event = json.dumps({"type": "chunk", "text": fallback})
+                asyncio.run_coroutine_threadsafe(queue.put(f"data: {event}\n\n"), loop)
         except Exception as exc:
             logger.exception("Mobile /ask brain stream failed")
             err = json.dumps({"type": "error", "message": str(exc)[:200]})
@@ -631,7 +640,11 @@ async def ask(req: AskRequest):
 
     async def _event_stream():
         while True:
-            item = await queue.get()
+            try:
+                item = await asyncio.wait_for(queue.get(), timeout=10)
+            except asyncio.TimeoutError:
+                yield ": keep-alive\n\n"
+                continue
             if item is None:
                 break
             yield item

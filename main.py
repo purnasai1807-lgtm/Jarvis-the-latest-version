@@ -43,6 +43,7 @@ from ui.hud import JarvisHUD, STANDBY, LISTENING, THINKING, SPEAKING, PAUSED
 
 _EN_TRIGGERS = {"english", "engleza", "engleză", "engleaza"}
 _RO_TRIGGERS = {"romanian", "romana", "română", "romina", "romaneste", "românești"}
+_TE_TRIGGERS = {"telugu", "తెలుగు"}
 _SWITCH_VERBS = {
     "schimba", "schimbă", "switch", "change", "treci", "vorbeste",
     "vorbești", "speak", "language", "limba", "set",
@@ -57,6 +58,11 @@ def _wants_english(text: str) -> bool:
 def _wants_romanian(text: str) -> bool:
     words = set(text.lower().split())
     return bool(words & _RO_TRIGGERS) and bool(words & _SWITCH_VERBS)
+
+
+def _wants_telugu(text: str) -> bool:
+    words = set(text.lower().split())
+    return bool(words & _TE_TRIGGERS) and bool(words & _SWITCH_VERBS)
 
 
 # ------------------------------------------------------------------
@@ -88,7 +94,6 @@ def main() -> None:
     config = load_config()
     setup_logging(config)
 
-    # Honour config default language (falls back to "ro")
     default_lang = config.get("language", {}).get("default", "ro")
     language.set(default_lang)
     logger.info(f"Active language: {language.get()}")
@@ -167,6 +172,14 @@ def main() -> None:
                     hud.set_response("Am trecut pe română, sir.")
                     hud.set_state(SPEAKING)
                     tts.speak("Am trecut pe română, sir.", language="ro")
+                    break
+
+                if _wants_telugu(transcript):
+                    language.set("te")
+                    logger.info("Language switched → TE")
+                    hud.set_response("తెలుగులోకి మార్చాను, sir.")
+                    hud.set_state(SPEAKING)
+                    tts.speak("తెలుగులోకి మార్చాను, sir.", language="te")
                     break
 
                 # -- Normal pipeline -----------------------------------

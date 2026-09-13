@@ -256,11 +256,18 @@ class WakeWordDetector:
         frames: list[bytes] = []
         silent_count = 0
         since_partial = 0
+        speech_started = False
 
         for _ in range(max_frames):
             raw = self._read_chunk()
             frames.append(raw)
             since_partial += 1
+
+            if not speech_started:
+                if self._rms(raw) >= self._silence_thresh:
+                    speech_started = True
+                    silent_count = 0
+                continue
 
             if self._rms(raw) < self._silence_thresh:
                 silent_count += 1
@@ -281,8 +288,7 @@ class WakeWordDetector:
                     daemon=True,
                 ).start()
 
-        # Discard if only silence was captured
-        if len(frames) <= silence_frames_needed:
+        if not speech_started:
             logger.debug("No speech captured after wake word")
             return None
 

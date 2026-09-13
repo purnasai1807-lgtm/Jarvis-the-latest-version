@@ -67,6 +67,11 @@ def analyze_image_bytes(image_bytes: bytes, prompt: str,
     return _ask_vision(b64, prompt, max_tokens=max_tokens)
 
 
+def ask_vision(img_b64: str, prompt: str, max_tokens: int = 1024) -> str:
+    """Public helper: send an image to GPT-4.1 mini vision and return the text response."""
+    return _ask_vision(img_b64, prompt, max_tokens=max_tokens)
+
+
 def _ask_vision(img_b64: str, prompt: str, max_tokens: int = 1024) -> str:
     """Send an image to GPT-4.1 mini vision and return the text response."""
     from openai import OpenAI

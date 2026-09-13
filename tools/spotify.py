@@ -131,6 +131,12 @@ def spotify_now_playing() -> str:
             f"(album: {album}) — {mins_p}:{secs_p:02d}/{mins_d}:{secs_d:02d}"
         )
     except Exception as exc:
+        if getattr(exc, "http_status", None) == 403:
+            logger.warning("Spotify current-track access requires Premium")
+            return (
+                "Spotify cannot provide the current track for this account. "
+                "An active Spotify Premium subscription is required."
+            )
         logger.error(f"spotify_now_playing failed: {exc}")
         return f"Error checking current track: {exc}"
 

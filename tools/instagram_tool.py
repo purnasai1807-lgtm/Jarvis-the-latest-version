@@ -56,19 +56,31 @@ def instagram_send_message(contact: str, message: str) -> str:
         if not _ensure_logged_in(page):
             return "Instagram requires manual login — a browser window was opened, please log in and try again."
 
-        page.get_by_role("button", name=re.compile("New message", re.I)).click()
+        new_message = page.locator("button, [role='button']").filter(has_text=re.compile(r"^New message$", re.I)).first
+        if new_message.count() > 0:
+            new_message.click()
+        else:
+            page.locator("button, [role='button']").filter(has_text=re.compile(r"New message", re.I)).first.click()
         time.sleep(1.0)
 
         search = page.get_by_placeholder(re.compile("Search", re.I))
         search.fill(contact)
         time.sleep(1.5)
 
-        page.locator("div[role='dialog'] div[role='button']").first.click()
+        result = page.locator("div[role='dialog'] div[role='button'], li[role='button']").filter(has_text=re.compile(contact, re.I)).first
+        if result.count() > 0:
+            result.click()
+        else:
+            page.locator("div[role='dialog'] div[role='button']").first.click()
         time.sleep(0.5)
-        page.get_by_role("button", name=re.compile("^Chat$|^Next$", re.I)).click()
+        next_button = page.locator("button, [role='button']").filter(has_text=re.compile(r"^(Chat|Next)$", re.I)).first
+        if next_button.count() > 0:
+            next_button.click()
         time.sleep(1.0)
 
-        box = page.get_by_role("textbox", name=re.compile("Message", re.I))
+        box = page.locator("div[contenteditable='true'], textarea, div[role='textbox']").last
+        if box.count() == 0:
+            return f"Instagram message target '{contact}' was not found or the message composer is unavailable."
         box.click()
         box.fill(message)
         page.keyboard.press("Enter")
@@ -99,8 +111,8 @@ def instagram_read_messages(contact: str, limit: int = 5) -> str:
         import base64
         b64 = base64.standard_b64encode(screenshot).decode()
 
-        from tools.vision import _ask_vision
-        result = _ask_vision(b64, f"Read the last {limit} messages in this Instagram DM thread. List them as: Name: message text")
+        from tools.vision import ask_vision
+        result = ask_vision(b64, f"Read the last {limit} messages in this Instagram DM thread. List them as: Name: message text")
         logger.info(f"instagram_read_messages: {contact}")
         return result
     except Exception as exc:

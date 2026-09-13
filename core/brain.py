@@ -5,7 +5,9 @@ think_stream() handles EVERYTHING: simple queries, tool calls, multi-round tool 
 """
 
 import concurrent.futures
+import inspect
 import json
+import re
 from datetime import datetime
 from typing import Any, Generator
 
@@ -16,6 +18,7 @@ from core import conversation, routines
 _TOOL_TIMEOUT = 60  # seconds before a tool call is abandoned
 _MAX_TOOL_ROUNDS = 5
 _HISTORY_LIMIT = 40  # how many recent turns to include in each prompt
+_LOCAL_HISTORY_LIMIT = 12
 
 
 # ── Think-block filter (strips <think>...</think> reasoning from local models) ──
@@ -162,18 +165,56 @@ class Brain:
             for t in self._tools
         ]
 
+    def _request_needs_tools(self, text: str) -> bool:
+        """Detect if a request likely needs tool calling.
+        
+        Tool-requiring keywords: open, control, turn on/off, play, send,
+        search, read, get weather, fetch, etc.
+        """
+        text_lower = text.lower().strip()
+        
+        # Keywords that strongly indicate tool use
+        tool_keywords = [
+            "open ", "launch ", "run ", "start ",
+            "control ", "turn on", "turn off", "switch ",
+            "play ", "pause ", "skip ", "volume ",
+            "send ", "message ", "email ", "post ",
+            "call ", "search ", "find ", "look ",
+            "get ", "fetch ", "read ", "show ",
+            "write code", "review code", "review ", "fix ",
+            "debug ", "refactor ", "build ", "implement ",
+            "edit ", "modify ", "change code", "coding ",
+            "claude ", "ask claude", "tell claude",
+            "what's the weather", "weather ", "temperature",
+            "lights ", "hue ", "nest ", "speaker ",
+            "lights_control", "hue_", "lights on", "lights off"
+        ]
+        
+        return any(text_lower.startswith(kw) or f" {kw}" in text_lower 
+                   for kw in tool_keywords)
+
     # ------------------------------------------------------------------
     # Main entry point
     # ------------------------------------------------------------------
     def think_stream(self, text: str, language: str = "en",
                      source: str = "voice") -> Generator[str, None, None]:
-        """Stream response.  Priority: ollama (if enabled) → OpenAI.
+        """Stream response. Priority: Ollama when enabled, then OpenAI,
+        with a quota-aware fallback to Ollama if the OpenAI key is exhausted.
 
         `source` tags this turn's origin (voice / mobile / dashboard / scheduler)
         in the cross-device conversation store.
         """
         if not text.strip():
             return
+
+        if source == "mobile":
+            fast_result = self._mobile_fast_path(text)
+            if fast_result is not None:
+                conversation.append("user", text, source=source, lang=language)
+                conversation.append("assistant", fast_result,
+                                    source=source, lang=language)
+                yield fast_result
+                return
 
         # ── Routine fast-path ──────────────────────────────────────
         # If the spoken text matches a voice-trigger routine, run it instead
@@ -194,16 +235,22 @@ class Brain:
                 return
 
         conversation.append("user", text, source=source, lang=language)
-        history = conversation.history_for_brain(_HISTORY_LIMIT)
+        history_limit = (0 if source == "mobile" else
+                 _LOCAL_HISTORY_LIMIT
+                 if self._ollama_enabled and source == "voice"
+                 else _HISTORY_LIMIT)
+        history = conversation.history_for_brain(history_limit)
 
         system = self._build_system(language, user_text=text)
         full_reply = ""
+        backend_name = "openai"
 
         try:
             if self._ollama_enabled:
                 backend_name = "ollama"
                 try:
-                    for chunk in self._stream_ollama(system, history):
+                    for chunk in self._stream_ollama(
+                            system, history, request_text=text):
                         full_reply += chunk
                         yield chunk
                 except Exception as exc:
@@ -219,9 +266,21 @@ class Brain:
                         yield chunk
             else:
                 backend_name = "openai"
-                for chunk in self._stream_openai(system, history):
-                    full_reply += chunk
-                    yield chunk
+                try:
+                    for chunk in self._stream_openai(system, history):
+                        full_reply += chunk
+                        yield chunk
+                except Exception as exc:
+                    msg = str(exc).lower()
+                    if "credit" in msg or "quota" in msg or "429" in msg or "insufficient" in msg:
+                        logger.warning(f"OpenAI quota exhausted, attempting Ollama fallback: {exc}")
+                        backend_name = "ollama"
+                        for chunk in self._stream_ollama(
+                            system, history, request_text=text):
+                            full_reply += chunk
+                            yield chunk
+                    else:
+                        raise
 
             conversation.append("assistant", full_reply, source=source, lang=language)
             logger.info(
@@ -231,7 +290,8 @@ class Brain:
 
         except Exception as exc:
             logger.error(f"Brain stream error: {exc}")
-            fallback = ("Scuze, am avut o eroare." if language == "ro"
+            fallback = ("క్షమించండి, లోపం సంభవించింది." if language == "te"
+                        else "Scuze, am avut o eroare." if language == "ro"
                         else "Sorry sir, I hit a snag.")
             conversation.append("assistant", fallback, source=source, lang=language)
             yield fallback
@@ -254,7 +314,7 @@ class Brain:
         usage_prompt = 0
         usage_completion = 0
 
-        for round_num in range(_MAX_TOOL_ROUNDS):
+        for round_num in range(1):
             text_buf = ""
             tool_calls: dict[int, dict] = {}
 
@@ -340,27 +400,24 @@ class Brain:
                     result = self._run_tool(name, handler, args)
 
                 logger.info(f"Tool result: {str(result)[:120]}")
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tc_msg["id"],
-                    "content": str(result),
-                })
+                yield str(result)
 
-            logger.debug(f"Tool round {round_num + 1} complete, continuing…")
-            text_buf = ""
+            break
 
     # ------------------------------------------------------------------
     # Ollama streaming (local, optional — OpenAI-compatible API)
     # ------------------------------------------------------------------
     def _stream_ollama(self, system: str,
-                       history: list[dict]) -> Generator[str, None, None]:
+                       history: list[dict],
+                       request_text: str = "") -> Generator[str, None, None]:
         client = self._get_ollama()
 
         messages: list[dict] = [{"role": "system", "content": system}]
         for msg in history:
             messages.append({"role": msg["role"], "content": msg["content"]})
 
-        tools = self._tools_openai() if self._tools else None
+        needs_tools = self._request_needs_tools(request_text)
+        tools = self._tools_openai() if self._tools and needs_tools else None
 
         for round_num in range(_MAX_TOOL_ROUNDS):
             text_buf = ""
@@ -372,6 +429,14 @@ class Brain:
                 messages=messages,
                 tools=tools,
                 stream=True,
+                temperature=0.2,
+                max_tokens=256,
+                extra_body={
+                    "options": {
+                        "num_ctx": 4096,
+                        "num_predict": 256,
+                    },
+                },
             )
 
             for chunk in stream:
@@ -402,6 +467,16 @@ class Brain:
             if remaining:
                 text_buf += remaining
                 yield remaining
+
+            # Try to extract tool calls from text (Ollama doesn't reliably call tools)
+            extracted_tools = self._extract_tool_calls_from_text(text_buf)
+            if extracted_tools:
+                logger.info(f"Ollama: extracted {len(extracted_tools)} tool call(s) from text")
+                for tool_name, args in extracted_tools:
+                    if tool_name in self._tool_handlers:
+                        handler = self._tool_handlers[tool_name]
+                        result = self._run_tool(tool_name, handler, args)
+                        logger.info(f"Extracted tool '{tool_name}' result: {str(result)[:120]}")
 
             if not tool_calls:
                 break
@@ -446,11 +521,171 @@ class Brain:
             logger.debug(f"Tool round {round_num + 1} complete, continuing…")
             text_buf = ""
 
+    def _extract_tool_calls_from_text(self, text: str) -> list[tuple[str, dict]]:
+        """Extract local-model tool calls returned as plain text or JSON."""
+        if not self._tool_handlers:
+            return []
+        extracted = []
+
+        # Small local models sometimes emit the OpenAI function envelope as
+        # response text instead of populating delta.tool_calls. Recover valid
+        # JSON objects and tolerate trailing commas in the generated payload.
+        decoder = json.JSONDecoder()
+        for start, char in enumerate(text):
+            if char != "{":
+                continue
+            try:
+                value, _ = decoder.raw_decode(text[start:])
+            except json.JSONDecodeError:
+                candidate = re.sub(r",\s*([}\]])", r"\1", text[start:])
+                try:
+                    value, _ = decoder.raw_decode(candidate)
+                except json.JSONDecodeError:
+                    continue
+            if not isinstance(value, dict):
+                continue
+            name = value.get("name")
+            args = value.get("parameters", value.get("arguments", {}))
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    args = {}
+            if isinstance(name, str) and name in self._tool_handlers and isinstance(args, dict):
+                extracted.append((name, args))
+
+        if extracted:
+            return extracted
+
+        text_lower = text.lower()
+        if "opened " in text_lower or "open " in text_lower:
+            for app in ["calculator", "notepad", "chrome", "firefox", "spotify", "discord", "whatsapp", "edge"]:
+                if app in text_lower:
+                    extracted.append(("open_app", {"app": app}))
+                    break
+        if ("turned on" in text_lower or "turned off" in text_lower or "turn on" in text_lower or "turn off" in text_lower) and "light" in text_lower:
+            state = "on" if ("turned on" in text_lower or "turn on" in text_lower) else "off"
+            extracted.append(("lights_control", {"state": state}))
+        return extracted
+
+    def _mobile_fast_path(self, text: str) -> str | None:
+        """Handle unambiguous phone actions without asking a small LLM."""
+        normalized = re.sub(r"\s+", " ", text.strip().lower())
+        handlers = self._tool_handlers
+
+        if any(word in normalized for word in ("whatsapp", "what's app", "what’s app")):
+            if normalized.startswith(("open ", "launch ", "start ")):
+                handler = handlers.get("open_app")
+                if handler:
+                    return self._run_tool("open_app", handler, {"name": "whatsapp"})
+
+            match = re.search(
+                r"(?:send|text).*?(?:to|for)\s+([\w .'-]+?)\s+"
+                r"(?:saying|message|that says|with)\s+(.+)$",
+                text.strip(),
+                flags=re.IGNORECASE,
+            )
+            if match and handlers.get("whatsapp_send"):
+                contact = match.group(1).strip(" .,'\"")
+                message = match.group(2).strip(" .,'\"")
+                return self._run_tool(
+                    "whatsapp_send", handlers["whatsapp_send"],
+                    {"contact": contact, "message": message},
+                )
+
+        app_match = re.match(
+            r"(?:open|launch|start)\s+(?:the\s+)?"
+            r"(calculator|notepad|chrome|firefox|spotify|discord|whatsapp|edge)$",
+            normalized,
+        )
+        if app_match and handlers.get("open_app"):
+            return self._run_tool(
+                "open_app", handlers["open_app"], {"name": app_match.group(1)},
+            )
+
+        if normalized in ("mute", "mute volume", "unmute", "unmute volume"):
+            action = "mute" if normalized.startswith("mute") else "unmute"
+            if handlers.get("volume_control"):
+                return self._run_tool("volume_control", handlers["volume_control"],
+                                      {"action": action})
+
+        volume_match = re.match(r"(?:set )?(?:the )?volume(?: to)?\s+(\d{1,3})%?$", normalized)
+        if volume_match and handlers.get("volume_control"):
+            level = max(0, min(100, int(volume_match.group(1))))
+            return self._run_tool("volume_control", handlers["volume_control"],
+                                  {"action": "set", "level": level})
+
+        if normalized in ("volume up", "increase volume", "turn volume up"):
+            if handlers.get("volume_control"):
+                return self._run_tool("volume_control", handlers["volume_control"],
+                                      {"action": "up"})
+        if normalized in ("volume down", "decrease volume", "turn volume down"):
+            if handlers.get("volume_control"):
+                return self._run_tool("volume_control", handlers["volume_control"],
+                                      {"action": "down"})
+
+        spotify_actions = {
+            "play music": "play", "pause music": "pause", "pause spotify": "pause",
+            "resume music": "play", "next song": "next", "skip song": "next",
+            "previous song": "previous", "previous track": "previous",
+        }
+        if normalized in spotify_actions and handlers.get("spotify_control"):
+            return self._run_tool("spotify_control", handlers["spotify_control"],
+                                  {"action": spotify_actions[normalized]})
+
+        search_match = re.match(r"(?:search|look up|google)\s+(?:for\s+)?(.+)$", text.strip(), re.I)
+        if search_match and handlers.get("web_search"):
+            return self._run_tool("web_search", handlers["web_search"],
+                                  {"query": search_match.group(1).strip()})
+
+        weather_match = re.match(r"(?:weather|what(?:'s| is) the weather)(?:\s+in\s+(.+))?$", text.strip(), re.I)
+        if weather_match and handlers.get("get_weather"):
+            return self._run_tool("get_weather", handlers["get_weather"],
+                                  {"city": (weather_match.group(1) or "Bucharest").strip()})
+
+        if normalized in ("take a screenshot", "take screenshot", "screenshot"):
+            if handlers.get("screenshot"):
+                return self._run_tool("screenshot", handlers["screenshot"], {"monitor": 0})
+
+        return None
+
     # ------------------------------------------------------------------
     # Tool execution
     # ------------------------------------------------------------------
     def _run_tool(self, name: str, handler, args: dict) -> str:
         """Execute a single tool with timeout."""
+        while isinstance(args, dict):
+            nested = args.get("parameters")
+            if isinstance(nested, dict):
+                args = nested
+                continue
+            function = args.get("function")
+            if isinstance(function, dict) and isinstance(function.get("parameters"), dict):
+                args = function["parameters"]
+                continue
+            raw_arguments = args.get("arguments")
+            if isinstance(raw_arguments, str):
+                try:
+                    parsed = json.loads(raw_arguments)
+                except json.JSONDecodeError:
+                    break
+                if isinstance(parsed, dict):
+                    args = parsed
+                    continue
+            break
+
+        parameters = inspect.signature(handler).parameters
+        for source, target in {
+            "app": "name",
+            "application": "name",
+            "link": "url",
+            "query": "text",
+            "recipient": "contact",
+            "body": "message",
+        }.items():
+            if source in args and target in parameters and target not in args:
+                args[target] = args.pop(source)
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
             future = ex.submit(handler, **args)
             try:
@@ -468,7 +703,9 @@ class Brain:
     def _build_system(self, language: str, user_text: str = "") -> str:
         now = datetime.now().strftime("%A, %B %d, %Y — %H:%M")
         lang_hint = (
-            "The user spoke in Romanian — reply in Romanian."
+            "The user spoke in Telugu — reply in Telugu."
+            if language == "te"
+            else "The user spoke in Romanian — reply in Romanian."
             if language == "ro"
             else "The user spoke in English — reply in English."
         )

@@ -30,7 +30,8 @@ class _TasksScreenState extends State<TasksScreen> {
     _refresh();
     _poll = Timer.periodic(_refreshInterval, (_) {
       // Only poll while there's work in progress — avoids flicker on idle screens
-      if (_tasks.any((t) => t['status'] == 'running' || t['status'] == 'pending')) {
+      if (_tasks
+          .any((t) => t['status'] == 'running' || t['status'] == 'pending')) {
         _refresh(silent: true);
       }
     });
@@ -81,8 +82,7 @@ class _TasksScreenState extends State<TasksScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () =>
-                Navigator.pop(ctx, controller.text.trim()),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('START'),
           ),
         ],
@@ -222,7 +222,7 @@ class _TaskCard extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.notes_outlined,
+                  const Icon(Icons.notes_outlined,
                       size: 12, color: Colors.white38),
                   const SizedBox(width: 4),
                   Text(

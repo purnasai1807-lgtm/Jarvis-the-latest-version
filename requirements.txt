@@ -27,6 +27,9 @@ beautifulsoup4>=4.12      # HTML parsing
 youtube-transcript-api>=1.2  # YouTube transcripts
 requests>=2.31            # HTTP fetching
 
+# Optional integrations
+discord.py>=2.4.0        # Discord bot client for discord_send / discord_read
+
 # Phase 2: OS & App Control
 pyautogui>=0.9.54       # keyboard/mouse automation
 pyperclip>=1.9          # clipboard access

@@ -7,39 +7,84 @@ Ctrl+N → search contact → Enter → paste message → Enter.
 Tools: whatsapp_send, whatsapp_read
 """
 
+import os
 import subprocess
 import time
+from typing import Any
 
 import pyautogui
 import pyperclip
 from loguru import logger
 
+from tools import vision as vision_module
+
 _WA_UWP = r"shell:AppsFolder\5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App"
-_WA_EXE_NAMES = ["whatsapp"]   # window title fragments to match
+_WA_EXE_NAMES = ["whatsapp", "whatsapp desktop", "whatsapp.exe"]
+_WA_CANDIDATE_EXES = [
+    os.path.expandvars(r"%LOCALAPPDATA%\Programs\WhatsApp\WhatsApp.exe"),
+    os.path.expandvars(r"%LOCALAPPDATA%\WhatsApp\WhatsApp.exe"),
+    os.path.expandvars(r"%PROGRAMFILES%\WindowsApps\WhatsApp.exe"),
+]
+
+
+def _find_whatsapp_hwnd() -> int | None:
+    """Find the WhatsApp window by title, class, or process name."""
+    import win32gui
+    import win32process
+
+    matches: list[int] = []
+
+    def cb(hwnd: int, _param: Any) -> None:
+        if not win32gui.IsWindowVisible(hwnd):  # type: ignore[arg-type]
+            return
+
+        title = win32gui.GetWindowText(hwnd).lower()  # type: ignore[arg-type]
+        cls = win32gui.GetClassName(hwnd).lower()  # type: ignore[arg-type]
+
+        if any(token in title for token in _WA_EXE_NAMES) or any(token in cls for token in _WA_EXE_NAMES):
+            matches.append(hwnd)
+            return
+
+        try:
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)  # type: ignore[arg-type]
+            if pid:
+                import psutil
+                proc_name = psutil.Process(pid).name().lower()
+                if "whatsapp" in proc_name:
+                    matches.append(hwnd)
+        except Exception:
+            pass
+
+    win32gui.EnumWindows(cb, None)  # type: ignore[arg-type]
+    return matches[0] if matches else None
 
 
 def _focus_whatsapp() -> bool:
     """Bring WhatsApp Desktop to foreground. Opens it if not running."""
-    import win32gui
     import win32con
+    import win32gui
 
-    def _find_hwnd():
-        result = []
-        def cb(hwnd, _):
-            if win32gui.IsWindowVisible(hwnd):
-                title = win32gui.GetWindowText(hwnd).lower()
-                if any(n in title for n in _WA_EXE_NAMES):
-                    result.append(hwnd)
-        win32gui.EnumWindows(cb, None)
-        return result[0] if result else None
-
-    hwnd = _find_hwnd()
+    hwnd = _find_whatsapp_hwnd()
     if not hwnd:
-        subprocess.Popen(["explorer.exe", _WA_UWP])
+        for candidate in _WA_CANDIDATE_EXES:
+            if os.path.isfile(candidate):
+                try:
+                    os.startfile(candidate)
+                    logger.info(f"Started WhatsApp from candidate path: {candidate}")
+                    break
+                except Exception as exc:
+                    logger.warning(f"WhatsApp candidate launch failed: {exc}")
+        else:
+            try:
+                subprocess.Popen(["explorer.exe", _WA_UWP], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                logger.info("Started WhatsApp through shell:AppsFolder")
+            except Exception as exc:
+                logger.warning(f"WhatsApp launch warning: {exc}")
         time.sleep(4)
-        hwnd = _find_hwnd()
+        hwnd = _find_whatsapp_hwnd()
 
     if not hwnd:
+        logger.warning("WhatsApp window not found after launch attempt")
         return False
 
     try:
@@ -123,18 +168,24 @@ def whatsapp_read(contact: str, limit: int = 5) -> str:
         time.sleep(1.0)
 
         # Take a screenshot of the chat window and return it for vision
-        import mss, base64, io
+        import base64
+        import io
+        import mss
         from PIL import Image
-        with mss.mss() as sct:
-            img = sct.grab(sct.monitors[1])
-        pil = Image.frombytes("RGB", img.size, img.rgb)
+
+        sct: Any = mss.mss()
+        with sct as screen:
+            img: Any = screen.grab(screen.monitors[1])
+        pil: Any = Image.frombytes("RGB", img.size, img.rgb)
         buf = io.BytesIO()
         pil.save(buf, format="PNG")
         b64 = base64.standard_b64encode(buf.getvalue()).decode()
 
         # Ask Claude Vision to read the messages
-        from tools.vision import _ask_vision
-        result = _ask_vision(b64, f"Read the last {limit} messages in this WhatsApp chat. List them as: ContactName: message text")
+        result = vision_module.ask_vision(
+            b64,
+            f"Read the last {limit} messages in this WhatsApp chat. List them as: ContactName: message text",
+        )
         logger.info(f"whatsapp_read: {contact}")
         return result
 

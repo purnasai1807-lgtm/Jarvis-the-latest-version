@@ -188,7 +188,7 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen>
             onChanged: (v) => setState(() => _playOnPc = v),
             title: const Text('Also speak on PC',
                 style: TextStyle(color: Colors.white)),
-            activeColor: kAccent,
+            activeThumbColor: kAccent,
             dense: true,
           ),
           Padding(
@@ -200,8 +200,9 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen>
               child: AnimatedBuilder(
                 animation: _pulse,
                 builder: (_, __) {
-                  final scale =
-                      _phase == _Phase.recording ? 1.0 + _pulse.value * 0.15 : 1.0;
+                  final scale = _phase == _Phase.recording
+                      ? 1.0 + _pulse.value * 0.15
+                      : 1.0;
                   return Transform.scale(
                     scale: scale,
                     child: Container(
@@ -220,9 +221,7 @@ class _VoiceScreenState extends ConsumerState<VoiceScreen>
                         ],
                       ),
                       child: Icon(
-                        _phase == _Phase.recording
-                            ? Icons.mic
-                            : Icons.mic_none,
+                        _phase == _Phase.recording ? Icons.mic : Icons.mic_none,
                         size: 64,
                         color: _phaseColor(),
                       ),
@@ -272,8 +271,7 @@ class _TranscriptBubble extends StatelessWidget {
           Text(label,
               style: TextStyle(color: accent, letterSpacing: 2, fontSize: 12)),
           const SizedBox(height: 4),
-          Text(body,
-              style: const TextStyle(color: Colors.white, height: 1.4)),
+          Text(body, style: const TextStyle(color: Colors.white, height: 1.4)),
         ],
       ),
     );

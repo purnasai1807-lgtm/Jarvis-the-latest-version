@@ -419,6 +419,7 @@ class JarvisApi {
           options: Options(
             responseType: ResponseType.stream,
             headers: {'Accept': 'text/event-stream'},
+            receiveTimeout: const Duration(minutes: 3),
           ),
           cancelToken: cancelToken,
         );

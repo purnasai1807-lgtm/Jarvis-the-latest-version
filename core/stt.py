@@ -1,5 +1,5 @@
 """
-Speech-to-text — Faster-Whisper, locked to English + Romanian only.
+ Speech-to-text — Faster-Whisper, locked to English, Romanian, and Telugu.
 
 Accepts WAV bytes, returns (transcript, language_code).
 If Whisper detects any language other than EN/RO, it re-transcribes forced as English.
@@ -10,7 +10,7 @@ from typing import Tuple
 
 from loguru import logger
 
-_ALLOWED_LANGS = {"en", "ro"}
+_ALLOWED_LANGS = {"en", "ro", "te"}
 
 
 class SpeechToText:

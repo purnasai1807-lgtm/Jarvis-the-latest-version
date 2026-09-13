@@ -16,13 +16,17 @@ _PROJECT = Path(__file__).resolve().parent.parent
 
 
 def install() -> None:
-    python = Path(sys.executable).resolve()
+    launcher = _PROJECT / "start_jarvis.bat"
+    if not launcher.exists():
+        raise FileNotFoundError(f"Jarvis launcher not found: {launcher}")
+
     vbs = (
         f'Set WshShell = CreateObject("WScript.Shell")\n'
         f'WshShell.CurrentDirectory = "{_PROJECT}"\n'
-        f'WshShell.Run """{python}"" main.py", 1, False\n'
+        f'WshShell.Run """{launcher}""", 0, False\n'
     )
-    _VBS.write_text(vbs)
+    _STARTUP.mkdir(parents=True, exist_ok=True)
+    _VBS.write_text(vbs, encoding="utf-8")
     print(f"Auto-start installed: {_VBS}")
 
 

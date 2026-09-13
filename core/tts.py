@@ -36,6 +36,7 @@ class TextToSpeech:
         edge_cfg = tts_cfg.get("edge", {})
         self._edge_voice_en: str = edge_cfg.get("voice_en", "en-US-GuyNeural")
         self._edge_voice_ro: str = edge_cfg.get("voice_ro", "ro-RO-EmilNeural")
+        self._edge_voice_te: str = edge_cfg.get("voice_te", "te-IN-MohanNeural")
         self._edge_rate: str = edge_cfg.get("rate", "+0%")
         self._edge_volume: str = edge_cfg.get("volume", "+0%")
 
@@ -77,8 +78,7 @@ class TextToSpeech:
     # ------------------------------------------------------------------
     # Streaming TTS — accepts text generator from brain.think_stream()
     # ------------------------------------------------------------------
-    def speak_streamed(self, text_chunks: Generator[str, None, None],
-                       language: str = "en") -> None:
+    def speak_streamed(self, text_chunks: Generator[str, None, None],language: str = "en") -> None:
         """Buffer text into sentences, generate audio for each immediately.
         Guarantees a fallback response if the generator yields nothing."""
         if self._engine == "kokoro":
@@ -171,8 +171,7 @@ class TextToSpeech:
     # ------------------------------------------------------------------
     # ElevenLabs streaming (cloud)
     # ------------------------------------------------------------------
-    def _stream_elevenlabs(self, text_chunks: Generator[str, None, None],
-                           language: str = "en") -> None:
+    def _stream_elevenlabs(self, text_chunks: Generator[str, None, None],language: str = "en") -> None:
         self._ensure_el_client()
         buffer = ""
         spoke_something = False
@@ -311,7 +310,9 @@ class TextToSpeech:
     # Edge-TTS (free fallback)
     # ------------------------------------------------------------------
     def _speak_edge(self, text: str, language: str = "en") -> None:
-        voice = self._edge_voice_ro if language == "ro" else self._edge_voice_en
+        voice = (self._edge_voice_ro if language == "ro"
+             else self._edge_voice_te if language == "te"
+             else self._edge_voice_en)
         mp3_bytes = audio_io.synthesize_edge_mp3(
             text, voice, rate=self._edge_rate, volume=self._edge_volume,
         )
@@ -345,7 +346,9 @@ class TextToSpeech:
                     self._el_client, text, self._el_voice_id,
                     self._el_model_id, self._el_fmt,
                 )
-            voice = self._edge_voice_ro if language == "ro" else self._edge_voice_en
+            voice = (self._edge_voice_ro if language == "ro"
+                     else self._edge_voice_te if language == "te"
+                     else self._edge_voice_en)
             mp3 = audio_io.synthesize_edge_mp3(
                 text, voice, rate=self._edge_rate, volume=self._edge_volume,
             )

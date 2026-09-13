@@ -92,7 +92,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'PC unreachable: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}';
+        _error =
+            'PC unreachable: ${e.toString().substring(0, e.toString().length.clamp(0, 80))}';
         _loading = false;
       });
     }
@@ -162,12 +163,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final mode = ref.watch(connectionMonitorProvider);
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('J.A.R.V.I.S.'),
-            const SizedBox(width: 10),
-            const _PresenceChip(),
+            Text('J.A.R.V.I.S.'),
+            SizedBox(width: 10),
+            _PresenceChip(),
           ],
         ),
         actions: [
@@ -303,11 +304,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             heroTag: 'voice',
             backgroundColor: kBgPanel,
             foregroundColor: kAccent,
-            shape: const CircleBorder(side: BorderSide(color: kAccent, width: 2)),
+            shape:
+                const CircleBorder(side: BorderSide(color: kAccent, width: 2)),
             onPressed: _api == null
                 ? null
                 : () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => VoiceScreen(api: _api!)),
+                      MaterialPageRoute(
+                          builder: (_) => VoiceScreen(api: _api!)),
                     ),
             child: const Icon(Icons.mic),
           ),
@@ -334,7 +337,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               color: kAccent,
               onRefresh: _refresh,
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: kAccent))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: kAccent))
                   : (_api?.isLiteOnly == true)
                       ? const _LiteOnlyOnboarding()
                       : ListView(
@@ -375,12 +379,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 'WEATHER', _formatWeather(_data?['weather'])),
                             _SimpleCard(
                                 'CALENDAR', _data?['calendar']?.toString()),
-                            _SimpleCard(
-                                'EMAILS', _data?['emails']?.toString()),
+                            _SimpleCard('EMAILS', _data?['emails']?.toString()),
                             _SimpleCard(
                                 'SPOTIFY', _data?['spotify']?.toString()),
-                            _SimpleCard(
-                                'LIGHTS', _data?['lights']?.toString()),
+                            _SimpleCard('LIGHTS', _data?['lights']?.toString()),
                             const SizedBox(height: 80),
                           ],
                         ),
@@ -413,7 +415,10 @@ class _LiteOnlyOnboarding extends StatelessWidget {
           'JARVIS LITE',
           textAlign: TextAlign.center,
           style: TextStyle(
-              color: kAccent, letterSpacing: 4, fontSize: 22, fontWeight: FontWeight.w600),
+              color: kAccent,
+              letterSpacing: 4,
+              fontSize: 22,
+              fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 24),
         Card(
@@ -422,21 +427,27 @@ class _LiteOnlyOnboarding extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _step(1, 'Add an OpenAI API key',
+                _step(
+                    1,
+                    'Add an OpenAI API key',
                     'Open Settings → LITE MODE → paste a key (sk-…). '
-                    'Stored only on this phone, never sent to the PC.'),
+                        'Stored only on this phone, never sent to the PC.'),
                 _divider(),
                 _step(2, 'Tap ASK',
                     'Type any question. Lite Jarvis answers directly via OpenAI.'),
                 _divider(),
-                _step(3, 'Try the lite tools',
+                _step(
+                    3,
+                    'Try the lite tools',
                     '• "What\'s the weather in Bucharest?"\n'
-                    '• "Set a reminder to drink water in 15 minutes."\n'
-                    '• "Calculate 2389 * 14 / 5."'),
+                        '• "Set a reminder to drink water in 15 minutes."\n'
+                        '• "Calculate 2389 * 14 / 5."'),
                 _divider(),
-                _step(4, 'When you\'re home',
+                _step(
+                    4,
+                    'When you\'re home',
                     'Settings → PC CONNECTION → SET UP PC NOW to pair with '
-                    'the desktop and unlock voice + 47 tools.'),
+                        'the desktop and unlock voice + 47 tools.'),
               ],
             ),
           ),
@@ -458,15 +469,16 @@ class _LiteOnlyOnboarding extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 28, height: 28,
+              width: 28,
+              height: 28,
               alignment: Alignment.center,
               decoration: const BoxDecoration(
-                color: kAccent, shape: BoxShape.circle,
+                color: kAccent,
+                shape: BoxShape.circle,
               ),
               child: Text(
                 '$n',
-                style: const TextStyle(
-                    color: kBg, fontWeight: FontWeight.w700),
+                style: const TextStyle(color: kBg, fontWeight: FontWeight.w700),
               ),
             ),
             const SizedBox(width: 12),
@@ -481,8 +493,8 @@ class _LiteOnlyOnboarding extends StatelessWidget {
                           letterSpacing: 1.2)),
                   const SizedBox(height: 4),
                   Text(body,
-                      style: const TextStyle(
-                          color: Colors.white70, height: 1.4)),
+                      style:
+                          const TextStyle(color: Colors.white70, height: 1.4)),
                 ],
               ),
             ),
@@ -584,7 +596,8 @@ class _SystemCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('SYSTEM', style: TextStyle(color: kAccent, letterSpacing: 2)),
+            const Text('SYSTEM',
+                style: TextStyle(color: kAccent, letterSpacing: 2)),
             const SizedBox(height: 8),
             Text(
               'CPU ${sys['cpu_percent']}%   ·   '
@@ -616,7 +629,8 @@ class _SimpleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(color: kAccent, letterSpacing: 2)),
+            Text(title,
+                style: const TextStyle(color: kAccent, letterSpacing: 2)),
             const SizedBox(height: 8),
             Text(
               body == null || body!.isEmpty ? '—' : body!,
@@ -894,7 +908,8 @@ class _QuickRoutinesRow extends StatelessWidget {
                 return ActionChip(
                   backgroundColor: kBgPanel,
                   side: const BorderSide(color: kAccent, width: 1),
-                  avatar: const Icon(Icons.play_arrow, size: 14, color: kAccent),
+                  avatar:
+                      const Icon(Icons.play_arrow, size: 14, color: kAccent),
                   label: Text(
                     name,
                     style: const TextStyle(color: kAccent, fontSize: 12),
@@ -1054,12 +1069,10 @@ class _WatchesMiniCard extends StatelessWidget {
                   if (active > 0)
                     Text(
                       '$active active',
-                      style:
-                          const TextStyle(color: kAccent, fontSize: 11),
+                      style: const TextStyle(color: kAccent, fontSize: 11),
                     ),
                   if (active > 0 && fired > 0)
-                    const Text(' · ',
-                        style: TextStyle(color: Colors.white24)),
+                    const Text(' · ', style: TextStyle(color: Colors.white24)),
                   if (fired > 0)
                     Text(
                       '$fired fired',
@@ -1070,13 +1083,12 @@ class _WatchesMiniCard extends StatelessWidget {
               if (last is Map) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: kAmber.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                        color: kAmber.withValues(alpha: 0.4)),
+                    border: Border.all(color: kAmber.withValues(alpha: 0.4)),
                   ),
                   child: Row(
                     children: [
@@ -1088,8 +1100,7 @@ class _WatchesMiniCard extends StatelessWidget {
                           (last['last_message'] as String?) ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: kAmber, fontSize: 12),
+                          style: const TextStyle(color: kAmber, fontSize: 12),
                         ),
                       ),
                     ],
@@ -1103,4 +1114,3 @@ class _WatchesMiniCard extends StatelessWidget {
     );
   }
 }
-

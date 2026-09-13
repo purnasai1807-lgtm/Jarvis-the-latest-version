@@ -21,10 +21,20 @@ _bot_ready = threading.Event()
 def init_discord(config: dict) -> None:
     global _bot_token
     _bot_token = config.get("apis", {}).get("discord", {}).get("bot_token", "")
-    if _bot_token:
-        _start_bot()
-    else:
+
+    if not _bot_token or _bot_token.startswith("YOUR_"):
         logger.warning("Discord bot token not configured — discord tools disabled")
+        _bot_token = ""
+        return
+
+    try:
+        import discord  # noqa: F401
+    except ModuleNotFoundError:
+        logger.warning("discord.py is not installed — discord tools disabled")
+        _bot_token = ""
+        return
+
+    _start_bot()
 
 
 def _start_bot() -> None:
