@@ -9,7 +9,7 @@ jarvis:
 
 # --- Active language ------------------------------------------
 language:
-  default: "en"   # "en" = English (Kokoro TTS), "ro" = Romanian (needs elevenlabs/edge)
+  default: "en"   # "en" = English, "te" = Telugu
 
 # --- Wake word ------------------------------------------------
 wake_word:
@@ -68,8 +68,8 @@ tts:
     voice: "am_michael"                   # male English voice (am_adam, am_echo, am_eric, am_michael, am_onyx)
     speed: 1.1
   edge:
-    voice_en: "en-US-GuyNeural"           # English voice (edge-tts fallback)
-    voice_ro: "ro-RO-EmilNeural"          # Romanian voice (edge-tts fallback)
+    voice_en: "en-IN-NeerjaNeural"        # Indian English voice (edge-tts fallback)
+    voice_te: "te-IN-MohanNeural"         # Telugu voice (edge-tts fallback)
     rate: "+0%"
     volume: "+0%"
 
@@ -78,7 +78,9 @@ stt:
   model_size: "small"         # "small" for speed, "large-v3" for accuracy
   device: "cuda"              # "cuda" for GPU, "cpu" for fallback
   compute_type: "float16"     # "float16" for GPU, "int8" for CPU
-  beam_size: 1                # 1 = greedy decode (fast), 5 = beam search (accurate)
+  beam_size: 5                # Higher beam search improves short accented commands
+  initial_prompt: "Jarvis voice commands in English and Telugu. Open WhatsApp, WhatsApp Desktop, calculator, Chrome, Spotify, Discord, and Edge. Telugu commands include తెరవండి, మూసేయండి, పంపండి, చదవండి, వాల్యూమ్, లైట్లు."
+  auto_detect: true           # Detect English or Telugu per voice turn
   preload: true               # load model at boot, not on first query
 
 # --- Audio / recording ----------------------------------------

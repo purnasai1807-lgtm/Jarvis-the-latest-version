@@ -1,10 +1,10 @@
 """
 Active language state — shared across all modules.
 
-Default: Romanian. Switch with set("en"), set("ro"), or set("te").
+Default: English. Switch with set("en") or set("te").
 """
 
-_lang: str = "ro"
+_lang: str = "en"
 
 
 def get() -> str:
@@ -13,6 +13,6 @@ def get() -> str:
 
 def set(lang: str) -> None:
     global _lang
-    if lang not in ("ro", "en", "te"):
+    if lang not in ("en", "te"):
         raise ValueError(f"Unsupported language: {lang}")
     _lang = lang

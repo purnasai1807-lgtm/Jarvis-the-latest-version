@@ -35,7 +35,6 @@ class TextToSpeech:
         # Edge-TTS settings (fallback)
         edge_cfg = tts_cfg.get("edge", {})
         self._edge_voice_en: str = edge_cfg.get("voice_en", "en-US-GuyNeural")
-        self._edge_voice_ro: str = edge_cfg.get("voice_ro", "ro-RO-EmilNeural")
         self._edge_voice_te: str = edge_cfg.get("voice_te", "te-IN-MohanNeural")
         self._edge_rate: str = edge_cfg.get("rate", "+0%")
         self._edge_volume: str = edge_cfg.get("volume", "+0%")
@@ -216,12 +215,12 @@ class TextToSpeech:
         if not spoke_something:
             if error_occurred:
                 fallback = ("Sorry sir, I ran into an error on that one."
-                            if language != "ro"
-                            else "Am întâmpinat o eroare, sir.")
+                            if language != "te"
+                            else "క్షమించండి, ఏదో సమస్య వచ్చింది.")
             else:
                 fallback = ("I have nothing to add, sir."
-                            if language != "ro"
-                            else "Nu am nimic de adăugat, sir.")
+                            if language != "te"
+                            else "నాకు చెప్పడానికి ఏమీ లేదు, sir.")
             logger.warning(f"speak_streamed: fallback triggered")
             self.speak(fallback, language)
 
@@ -268,13 +267,12 @@ class TextToSpeech:
         except Exception as exc:
             logger.error(f"TTS failed: {exc}")
 
-    def greet(self, language: str = "ro") -> None:
+    def greet(self, language: str = "en") -> None:
         """Time-aware startup greeting in the active language."""
         hour = datetime.now().hour
-        if language == "ro":
-            tod = "dimineața" if hour < 12 else "ziua" if hour < 18 else "seara"
-            self.speak(f"Bună {tod}, sir. Jarvis este online și pregătit.",
-                       language="ro")
+        if language == "te":
+            tod = "ఉదయం" if hour < 12 else "మధ్యాహ్నం" if hour < 18 else "సాయంత్రం"
+            self.speak(f"శుభ {tod}, sir. Jarvis సిద్ధంగా ఉంది.", language="te")
         else:
             tod = "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
             self.speak(f"Good {tod}, sir. Jarvis is online and ready.",
@@ -310,8 +308,7 @@ class TextToSpeech:
     # Edge-TTS (free fallback)
     # ------------------------------------------------------------------
     def _speak_edge(self, text: str, language: str = "en") -> None:
-        voice = (self._edge_voice_ro if language == "ro"
-             else self._edge_voice_te if language == "te"
+        voice = (self._edge_voice_te if language == "te"
              else self._edge_voice_en)
         mp3_bytes = audio_io.synthesize_edge_mp3(
             text, voice, rate=self._edge_rate, volume=self._edge_volume,
@@ -346,8 +343,7 @@ class TextToSpeech:
                     self._el_client, text, self._el_voice_id,
                     self._el_model_id, self._el_fmt,
                 )
-            voice = (self._edge_voice_ro if language == "ro"
-                     else self._edge_voice_te if language == "te"
+            voice = (self._edge_voice_te if language == "te"
                      else self._edge_voice_en)
             mp3 = audio_io.synthesize_edge_mp3(
                 text, voice, rate=self._edge_rate, volume=self._edge_volume,

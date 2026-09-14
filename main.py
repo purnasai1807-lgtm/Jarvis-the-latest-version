@@ -33,6 +33,7 @@ from core.tts import TextToSpeech
 from core.brain import Brain
 from core import (context, continue_session, language, plans, presence,
                   router, routines, scheduler, jobs)
+from core.voice_normalization import normalize_voice_command
 from tools import register_all
 from ui.hud import JarvisHUD, STANDBY, LISTENING, THINKING, SPEAKING, PAUSED
 
@@ -42,7 +43,6 @@ from ui.hud import JarvisHUD, STANDBY, LISTENING, THINKING, SPEAKING, PAUSED
 # ------------------------------------------------------------------
 
 _EN_TRIGGERS = {"english", "engleza", "engleză", "engleaza"}
-_RO_TRIGGERS = {"romanian", "romana", "română", "romina", "romaneste", "românești"}
 _TE_TRIGGERS = {"telugu", "తెలుగు"}
 _SWITCH_VERBS = {
     "schimba", "schimbă", "switch", "change", "treci", "vorbeste",
@@ -53,11 +53,6 @@ _SWITCH_VERBS = {
 def _wants_english(text: str) -> bool:
     words = set(text.lower().split())
     return bool(words & _EN_TRIGGERS) and bool(words & _SWITCH_VERBS)
-
-
-def _wants_romanian(text: str) -> bool:
-    words = set(text.lower().split())
-    return bool(words & _RO_TRIGGERS) and bool(words & _SWITCH_VERBS)
 
 
 def _wants_telugu(text: str) -> bool:
@@ -94,7 +89,9 @@ def main() -> None:
     config = load_config()
     setup_logging(config)
 
-    default_lang = config.get("language", {}).get("default", "ro")
+    default_lang = config.get("language", {}).get("default", "en")
+    if default_lang not in ("en", "te"):
+        default_lang = "en"
     language.set(default_lang)
     logger.info(f"Active language: {language.get()}")
 
@@ -143,17 +140,26 @@ def main() -> None:
     # -- callback: recording done, audio ready ---------------------------
     def on_speech(wav_bytes: bytes) -> None:
         lang = language.get()
+        auto_detect_voice_language = config.get("stt", {}).get(
+            "auto_detect", True
+        )
         hud.set_state(THINKING)
         try:
             while True:
-                # STT: force active language
-                transcript, _detected = stt.transcribe(wav_bytes, force_language=lang)
+                # Auto-detect each turn so Telugu and English can be mixed
+                # without requiring a manual language switch first.
+                transcript, detected = stt.transcribe(
+                    wav_bytes,
+                    force_language=None if auto_detect_voice_language else lang,
+                )
 
                 if not transcript:
                     _say_empty(tts, lang)
                     break
 
-                logger.info(f"[{lang.upper()}] {transcript}")
+                turn_lang = detected if detected in ("en", "te") else lang
+                transcript = normalize_voice_command(transcript)
+                logger.info(f"[{turn_lang.upper()}] {transcript}")
                 hud.set_transcript(transcript)
                 voice_db.log("user", transcript)
 
@@ -166,14 +172,6 @@ def main() -> None:
                     tts.speak("Switched to English, sir.", language="en")
                     break
 
-                if _wants_romanian(transcript):
-                    language.set("ro")
-                    logger.info("Language switched → RO")
-                    hud.set_response("Am trecut pe română, sir.")
-                    hud.set_state(SPEAKING)
-                    tts.speak("Am trecut pe română, sir.", language="ro")
-                    break
-
                 if _wants_telugu(transcript):
                     language.set("te")
                     logger.info("Language switched → TE")
@@ -183,7 +181,7 @@ def main() -> None:
                     break
 
                 # -- Normal pipeline -----------------------------------
-                lang = language.get()
+                lang = turn_lang
                 hud.set_state(THINKING)
                 stream = brain.think_stream(transcript, lang)
                 reply_chunks: list[str] = []
@@ -213,8 +211,10 @@ def main() -> None:
 
         except Exception as exc:
             logger.error(f"on_speech error: {exc}")
-            err_msg = ("Scuze, ceva n-a mers bine." if lang == "ro"
-                       else "Sorry sir, something went wrong.")
+            err_msg = (
+                "క్షమించండి, ఏదో సమస్య వచ్చింది." if lang == "te"
+                else "Sorry sir, something went wrong."
+            )
             tts.speak(err_msg, language=lang)
         finally:
             hud.set_state(STANDBY)
@@ -275,8 +275,10 @@ def main() -> None:
 
 
 def _say_empty(tts: TextToSpeech, lang: str) -> None:
-    msg = ("Nu am înțeles, mai repetați?" if lang == "ro"
-           else "I didn't catch that, could you repeat?")
+    msg = (
+        "క్షమించండి, మళ్ళీ చెప్పగలరా?" if lang == "te"
+        else "I didn't catch that, could you repeat?"
+    )
     tts.speak(msg, language=lang)
 
 

@@ -16,6 +16,7 @@ import struct
 import threading
 import time
 import wave
+from collections import deque
 from typing import Callable, Optional
 
 import numpy as np
@@ -44,7 +45,7 @@ class WakeWordDetector:
         audio_cfg = config.get("audio", {})
         self._input_device = audio_cfg.get("input_device", None)  # None = system default
         self._sample_rate: int = audio_cfg.get("sample_rate", 16000)
-        self._silence_thresh: int = audio_cfg.get("silence_threshold", 500)
+        self._silence_thresh: int = audio_cfg.get("silence_threshold", 80)
         self._silence_dur: float = audio_cfg.get("silence_duration", 1.5)
         self._max_rec: float = audio_cfg.get("max_record_seconds", 30)
 
@@ -56,6 +57,7 @@ class WakeWordDetector:
         self._running = False
         self._busy = False  # True while processing a request
         self._paused = False  # True when user pauses via HUD
+        self._recent_frames: deque[bytes] = deque(maxlen=8)
 
     # ------------------------------------------------------------------
     # Public API
@@ -123,6 +125,7 @@ class WakeWordDetector:
                 continue
             try:
                 raw = self._read_chunk()
+                self._recent_frames.append(raw)
                 pcm = np.frombuffer(raw, dtype=np.int16)
 
                 # Feed audio to OpenWakeWord
@@ -141,7 +144,11 @@ class WakeWordDetector:
                                 target=self._on_wake, daemon=True
                             ).start()
                         self._play_chime()
-                        audio = self._record_until_silence()
+                        # Keep a short pre-roll so speech that starts directly
+                        # after the wake phrase is not clipped by the chime.
+                        audio = self._record_until_silence(
+                            list(self._recent_frames)
+                        )
                         if audio:
                             threading.Thread(
                                 target=self._dispatch,
@@ -247,13 +254,15 @@ class WakeWordDetector:
             wf.writeframes(b"".join(frames))
         return buf.getvalue()
 
-    def _record_until_silence(self) -> Optional[bytes]:
+    def _record_until_silence(
+        self, pre_roll: list[bytes] | None = None
+    ) -> Optional[bytes]:
         silence_frames_needed = int(
             self._silence_dur * self._sample_rate / _OWW_CHUNK
         )
         max_frames = int(self._max_rec * self._sample_rate / _OWW_CHUNK)
 
-        frames: list[bytes] = []
+        frames: list[bytes] = list(pre_roll or [])
         silent_count = 0
         since_partial = 0
         speech_started = False

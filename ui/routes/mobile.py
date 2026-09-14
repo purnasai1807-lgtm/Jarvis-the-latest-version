@@ -22,6 +22,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from ui.routes.auth import require_api_key
+from core.voice_normalization import normalize_voice_command
 
 
 router = APIRouter(prefix="/api/mobile", tags=["mobile"])
@@ -591,7 +592,7 @@ async def dashboard_mobile() -> dict:
 
 class AskRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=4000)
-    language: str = Field(default="en", pattern="^(en|ro)$")
+    language: str = Field(default="en", pattern="^(en|te)$")
     play_on_pc: bool = False
 
 
@@ -620,8 +621,8 @@ async def ask(req: AskRequest):
                 asyncio.run_coroutine_threadsafe(queue.put(f"data: {event}\n\n"), loop)
             if not full_reply_chunks:
                 fallback = (
-                    "Nu am putut genera un raspuns. Incercati din nou."
-                    if req.language == "ro"
+                    "క్షమించండి, సమాధానం రూపొందించలేకపోయాను. మళ్ళీ ప్రయత్నించండి."
+                    if req.language == "te"
                     else "I could not generate a response. Please try again."
                 )
                 logger.error("Mobile /ask brain stream produced no response")
@@ -826,8 +827,8 @@ async def vision(
         raise HTTPException(413, "Image too large (10 MB max).")
 
     user_prompt = (prompt or "").strip() or "Describe what's in this image."
-    if language == "ro":
-        user_prompt += " Reply in Romanian."
+    if language == "te":
+        user_prompt += " Reply in Telugu."
 
     loop = asyncio.get_event_loop()
     try:
@@ -864,7 +865,7 @@ async def transcribe(
     """Receive a WAV upload from the phone, return Whisper transcript."""
     if _stt is None:
         raise HTTPException(503, "STT not initialized.")
-    if language not in ("en", "ro"):
+    if language not in ("en", "te"):
         language = "en"
 
     wav_bytes = await audio.read()
@@ -875,14 +876,14 @@ async def transcribe(
     text, lang = await loop.run_in_executor(
         None, _stt.transcribe, wav_bytes, language
     )
-    return {"text": text, "language": lang}
+    return {"text": normalize_voice_command(text), "language": lang}
 
 
 # ── Synthesize (text → audio for phone playback) ─────────────────
 
 class SynthesizeRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=4000)
-    language: str = Field(default="en", pattern="^(en|ro)$")
+    language: str = Field(default="en", pattern="^(en|te)$")
 
 
 @router.post("/synthesize", dependencies=[Depends(require_api_key)])

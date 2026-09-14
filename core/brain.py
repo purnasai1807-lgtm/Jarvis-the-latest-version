@@ -14,6 +14,7 @@ from typing import Any, Generator
 from loguru import logger
 
 from core import conversation, routines
+from core.voice_normalization import normalize_voice_command
 
 _TOOL_TIMEOUT = 60  # seconds before a tool call is abandoned
 _MAX_TOOL_ROUNDS = 5
@@ -189,9 +190,17 @@ class Brain:
             "lights ", "hue ", "nest ", "speaker ",
             "lights_control", "hue_", "lights on", "lights off"
         ]
+        telugu_tool_keywords = [
+            "తెరవ", "తెరువ", "ఓపెన్", "మూస", "పంప", "చదవ", "వెతక",
+            "వాల్యూమ్", "పెంచ", "తగ్గించ", "మ్యూట్", "ప్లే", "పాజ్",
+            "లైట్స్", "లైట్లు", "స్పీకర్", "వాతావరణం", "మెసేజ్",
+        ]
         
-        return any(text_lower.startswith(kw) or f" {kw}" in text_lower 
-                   for kw in tool_keywords)
+        return (
+            any(text_lower.startswith(kw) or f" {kw}" in text_lower
+                for kw in tool_keywords)
+            or any(kw in text for kw in telugu_tool_keywords)
+        )
 
     # ------------------------------------------------------------------
     # Main entry point
@@ -290,9 +299,10 @@ class Brain:
 
         except Exception as exc:
             logger.error(f"Brain stream error: {exc}")
-            fallback = ("క్షమించండి, లోపం సంభవించింది." if language == "te"
-                        else "Scuze, am avut o eroare." if language == "ro"
-                        else "Sorry sir, I hit a snag.")
+            fallback = (
+                "క్షమించండి, లోపం సంభవించింది." if language == "te"
+                else "Sorry sir, I hit a snag."
+            )
             conversation.append("assistant", fallback, source=source, lang=language)
             yield fallback
 
@@ -570,10 +580,10 @@ class Brain:
 
     def _mobile_fast_path(self, text: str) -> str | None:
         """Handle unambiguous phone actions without asking a small LLM."""
-        normalized = re.sub(r"\s+", " ", text.strip().lower())
+        normalized = normalize_voice_command(text).lower()
         handlers = self._tool_handlers
 
-        if any(word in normalized for word in ("whatsapp", "what's app", "what’s app")):
+        if "whatsapp" in normalized:
             if normalized.startswith(("open ", "launch ", "start ")):
                 handler = handlers.get("open_app")
                 if handler:
@@ -705,8 +715,6 @@ class Brain:
         lang_hint = (
             "The user spoke in Telugu — reply in Telugu."
             if language == "te"
-            else "The user spoke in Romanian — reply in Romanian."
-            if language == "ro"
             else "The user spoke in English — reply in English."
         )
         base = (
@@ -714,6 +722,14 @@ class Brain:
             "\n\nKnown shortcuts: 'the dashboard' or 'my dashboard' = open_url('dashboard') — "
             "this opens the Jarvis web dashboard at localhost:9000. Never ask which dashboard."
         )
+        if language == "te":
+            base += (
+                "\n\nTelugu command handling: understand Telugu requests as commands, "
+                "not as questions requiring translation. Map తెరవండి/ఓపెన్ to open, "
+                "మూసేయండి to close, పంపండి to send, చదవండి to read, "
+                "వెతకండి to search, వాల్యూమ్ పెంచండి/తగ్గించండి to volume up/down, "
+                "and లైట్లు ఆన్/ఆఫ్ to lights on/off. Use the matching tool."
+            )
 
         # Local models need stronger tool-use instructions
         if self._ollama_enabled and self._tools:

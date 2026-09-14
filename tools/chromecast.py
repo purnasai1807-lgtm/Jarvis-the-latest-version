@@ -68,7 +68,7 @@ def _generate_tts_mp3(text: str, lang: str = "en") -> bytes:
     """Generate TTS MP3 bytes using edge-tts."""
     import edge_tts
 
-    voice = "ro-RO-EmilNeural" if lang == "ro" else "en-US-GuyNeural"
+    voice = "te-IN-MohanNeural" if lang == "te" else "en-IN-NeerjaNeural"
 
     async def _gen():
         communicate = edge_tts.Communicate(text, voice)
@@ -112,7 +112,7 @@ def speaker_announce(message: str, lang: str = "en") -> str:
 
         # Use Google TTS URL — Nest Audio fetches directly from Google,
         # no local HTTP server needed, no firewall issues.
-        lang_code = "ro" if lang == "ro" else "en"
+        lang_code = "te" if lang == "te" else "en"
         encoded = urllib.parse.quote(message)
         url = (
             f"https://translate.google.com/translate_tts"
@@ -187,7 +187,7 @@ TOOLS = [
                 },
                 "lang": {
                     "type": "string",
-                    "description": "'en' for English (default) or 'ro' for Romanian",
+                    "description": "'en' for English (default) or 'te' for Telugu",
                 },
             },
             "required": ["message"],

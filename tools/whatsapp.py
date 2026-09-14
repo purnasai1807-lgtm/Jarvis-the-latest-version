@@ -98,7 +98,7 @@ def _focus_whatsapp() -> bool:
 
 
 def _type_text(text: str) -> None:
-    """Type text using clipboard to handle unicode (Romanian chars etc.)."""
+    """Type text using clipboard to handle Unicode characters."""
     old = ""
     try:
         old = pyperclip.paste()
