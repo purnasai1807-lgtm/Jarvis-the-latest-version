@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "linkedin-jarvis-reactor.svg",
+      "use": "@vercel/static"
+    }
+  ]
+}
