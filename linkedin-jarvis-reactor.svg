@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="627" viewBox="0 0 1200 627" role="img" aria-labelledby="title desc">
+  <title id="title">J.A.R.V.I.S. — An intelligent assistant for Windows</title>
+  <desc id="desc">A glowing orange hemispherical reactor representing the Jarvis voice assistant.</desc>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="80%">
+      <stop offset="0" stop-color="#172333"/>
+      <stop offset=".55" stop-color="#0a111c"/>
+      <stop offset="1" stop-color="#03060b"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="48%" r="52%">
+      <stop offset="0" stop-color="#ffd98a" stop-opacity=".95"/>
+      <stop offset=".2" stop-color="#ff8a1c" stop-opacity=".75"/>
+      <stop offset=".55" stop-color="#f0440a" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#ff3d00" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="34%" cy="25%" r="80%">
+      <stop offset="0" stop-color="#fff0bd"/>
+      <stop offset=".16" stop-color="#ffbd4b"/>
+      <stop offset=".48" stop-color="#f35d0b"/>
+      <stop offset=".82" stop-color="#9b2107"/>
+      <stop offset="1" stop-color="#240904"/>
+    </radialGradient>
+    <linearGradient id="line" x1="0" x2="1">
+      <stop stop-color="#ff7a17" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#ffd38a"/>
+      <stop offset="1" stop-color="#ff7a17" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="22"/></filter>
+    <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+  <rect width="1200" height="627" fill="url(#bg)"/>
+  <path d="M0 520 C250 450 330 585 610 520 S960 455 1200 515 V627 H0Z" fill="#07101b" opacity=".9"/>
+  <circle cx="820" cy="315" r="235" fill="url(#glow)" filter="url(#blur)"/>
+  <circle cx="820" cy="315" r="178" fill="url(#glow)" opacity=".85"/>
+  <circle cx="820" cy="315" r="126" fill="url(#orb)" stroke="#ffb347" stroke-width="3"/>
+  <ellipse cx="788" cy="273" rx="52" ry="34" fill="#fff4c9" opacity=".22" filter="url(#soft)"/>
+  <g fill="none" stroke="#ffd080" stroke-width="2" opacity=".85">
+    <ellipse cx="820" cy="315" rx="118" ry="42" transform="rotate(-12 820 315)"/>
+    <ellipse cx="820" cy="315" rx="112" ry="70" transform="rotate(28 820 315)"/>
+    <ellipse cx="820" cy="315" rx="105" ry="96" transform="rotate(68 820 315)"/>
+  </g>
+  <path d="M704 315 A116 116 0 0 0 936 315" fill="none" stroke="#ff7415" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="820" cy="315" r="24" fill="#fff7d7" opacity=".95"/>
+  <circle cx="820" cy="315" r="48" fill="none" stroke="#ff9b2f" stroke-width="2" opacity=".5"/>
+  <circle cx="820" cy="315" r="158" fill="none" stroke="#ff7a17" stroke-width="1" stroke-dasharray="3 15" opacity=".7"/>
+  <path d="M80 128 H510" stroke="url(#line)" stroke-width="2"/>
+  <text x="80" y="190" fill="#ff8b24" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="7">J.A.R.V.I.S.</text>
+  <text x="80" y="255" fill="#f6f8fb" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="700">Your voice.</text>
+  <text x="80" y="315" fill="#f6f8fb" font-family="Segoe UI, Arial, sans-serif" font-size="50" font-weight="700">Your assistant.</text>
+  <text x="80" y="370" fill="#aebdce" font-family="Segoe UI, Arial, sans-serif" font-size="23">English + Telugu voice commands for Windows.</text>
+  <text x="80" y="430" fill="#ffb45b" font-family="Segoe UI, Arial, sans-serif" font-size="17" letter-spacing="2">LOCAL STT  •  SMART TOOLS  •  NATURAL TTS</text>
+  <circle cx="86" cy="492" r="5" fill="#ff7618"/>
+  <text x="104" y="499" fill="#8fa4b9" font-family="Segoe UI, Arial, sans-serif" font-size="17">Open apps · control volume · send messages · automate your workflow</text>
+  <text x="80" y="566" fill="#536d86" font-family="Segoe UI, Arial, sans-serif" font-size="15" letter-spacing="2">BUILT FOR THE NEXT CONVERSATION</text>
+</svg>

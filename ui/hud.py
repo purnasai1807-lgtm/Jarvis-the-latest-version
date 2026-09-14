@@ -223,6 +223,7 @@ DIVIDER     = QColor(255, 255, 255, 18)
 ACCENT      = QColor(120, 220, 255)
 ACCENT_DIM  = QColor(58, 130, 158)
 AMBER       = QColor(255, 188, 96)
+ORANGE      = QColor(255, 120, 24)
 GREEN       = QColor(110, 225, 124)
 RED         = QColor(255, 116, 116)
 PURPLE      = QColor(200, 160, 255)
@@ -266,7 +267,7 @@ class ReactorWidget(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.setFixedSize(64, 64)
+        self.setFixedSize(112, 112)
         self._cpu = 0.0
         self._ram = 0.0
         self._gpu = 0.0
@@ -385,6 +386,40 @@ class ReactorWidget(QWidget):
         p.setBrush(QBrush(self._state_color))
         p.setPen(Qt.NoPen)
         p.drawEllipse(QPointF(cx, cy), cr, cr)
+
+        # ── orange hemispherical energy ball ─────────────────────
+        # The moving longitude bands create a spherical, rotating core.
+        ball_r = min(cx, cy) - 8
+        glow = QRadialGradient(QPointF(cx - 14, cy - 16), ball_r * 1.25)
+        glow.setColorAt(0.0, QColor(255, 210, 100, 190))
+        glow.setColorAt(0.45, QColor(255, 84, 8, 90))
+        glow.setColorAt(1.0, QColor(255, 45, 0, 0))
+        p.setBrush(QBrush(glow))
+        p.setPen(Qt.NoPen)
+        p.drawEllipse(QPointF(cx, cy), ball_r + 7, ball_r + 7)
+
+        ball = QRadialGradient(QPointF(cx - 14, cy - 18), ball_r * 1.2)
+        ball.setColorAt(0.0, QColor(255, 235, 165, 255))
+        ball.setColorAt(0.22, QColor(255, 150, 36, 255))
+        ball.setColorAt(0.68, QColor(222, 52, 7, 255))
+        ball.setColorAt(1.0, QColor(35, 7, 3, 255))
+        p.setBrush(QBrush(ball))
+        p.drawEllipse(QPointF(cx, cy), ball_r, ball_r)
+
+        p.setBrush(Qt.NoBrush)
+        p.setPen(QPen(QColor(255, 210, 120, 220), 1.5))
+        ball_rect = QRectF(cx - ball_r, cy - ball_r, 2 * ball_r, 2 * ball_r)
+        for tilt in (0.34, 0.56, 0.78):
+            band_h = ball_r * tilt
+            band_w = ball_r * (0.22 + 0.78 * abs(math.sin(self._phase + tilt)))
+            p.drawEllipse(QRectF(cx - band_w, cy - band_h, 2 * band_w, 2 * band_h))
+        p.setPen(QPen(ORANGE, 2.2))
+        p.drawArc(ball_rect, int(self._phase * 57.3 * 16), 180 * 16)
+
+        emitter = 9 + 2 * math.sin(self._phase * 2)
+        p.setBrush(QBrush(QColor(255, 248, 216, 255)))
+        p.setPen(Qt.NoPen)
+        p.drawEllipse(QPointF(cx, cy), emitter * 0.42, emitter * 0.42)
 
         # ── waveform overlay (LISTENING/SPEAKING) ────────────────
         if self._show_wave:
